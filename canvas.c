@@ -32,6 +32,9 @@ void canvas_color(Canvas canvas, Color color);
 void canvas_dot(Canvas canvas, Point point);
 void canvas_line(Canvas canvas, Point from, Point to);
 void canvas_triangle(Canvas canvas, Point v1, Point v2, Point v3);
+void canvas_fill_triangle(Canvas canvas, Point v1, Point v2, Point v3);
+void canvas_fill_flat_top_triangle(Canvas canvas, Point v1, Point v2, Point v3);
+void canvas_fill_flat_bottom_triangle(Canvas canvas, Point v1, Point v2, Point v3);
 
 // ---
 
@@ -94,4 +97,65 @@ void canvas_triangle(Canvas canvas, Point v1, Point v2, Point v3) {
 }
 
 void canvas_fill_triangle(Canvas canvas, Point v1, Point v2, Point v3) {
+  void swap(Point v1, Point v2) {
+    Point temp;
+    temp[0] = v1[0]; temp[1] = v1[1];
+    v1[0] = v2[0]; v1[1] = v2[1];
+    v2[0] = temp[0]; v2[1] = temp[1];
+  }
+
+  if (v2[1] < v1[1]) swap(v1, v2);
+  if (v3[1] < v2[1]) swap(v2, v3);
+  if (v2[1] < v1[1]) swap(v1, v2);
+
+  if ((int) v1[1] == (int) v2[1]) canvas_fill_flat_top_triangle(canvas, v1, v2, v3);
+  else if ((int) v2[1] == (int) v3[1]) canvas_fill_flat_bottom_triangle(canvas, v1, v2, v3);
+  else {
+    Point v4;
+    v4[1] = v2[1];
+    v4[0] = v1[0] + ((v3[0] - v1[0]) * ((v4[1] - v1[1]) / (v3[1] - v1[1])));
+
+    canvas_fill_flat_top_triangle(canvas, v2, v4, v3);
+    canvas_fill_flat_bottom_triangle(canvas, v1, v2, v4);
+  }
+}
+
+void canvas_fill_flat_top_triangle(Canvas canvas, Point v1, Point v2, Point v3) {
+  if (v2[0] < v1[0]) {
+    Point temp;
+    temp[0] = v1[0]; temp[1] = v1[1];
+    v1[0] = v2[0]; v1[1] = v2[1];
+    v2[0] = temp[0]; v2[1] = temp[1];
+  }
+
+  float x1_step = (v3[0] - v1[0]) / (v3[1] - v1[1]);
+  float x2_step = (v3[0] - v2[0]) / (v3[1] - v1[1]);
+  float x1_curr = v1[0];
+  float x2_curr = v2[0];
+  
+  for (float y = v1[1]; y <= v3[1]; y++) {
+    canvas_line(canvas, (Point) {x1_curr, y}, (Point) {x2_curr, y});
+    x1_curr += x1_step;
+    x2_curr += x2_step;
+  }
+}
+
+void canvas_fill_flat_bottom_triangle(Canvas canvas, Point v1, Point v2, Point v3) {
+  if (v3[0] < v2[0]) {
+    Point temp;
+    temp[0] = v2[0]; temp[1] = v2[1];
+    v2[0] = v3[0]; v2[1] = v3[1];
+    v3[0] = temp[0]; v3[1] = temp[1];
+  }
+
+  float x1_step = (v1[0] - v2[0]) / (v2[1] - v1[1]);
+  float x2_step = (v1[0] - v3[0]) / (v2[1] - v1[1]);
+  float x1_curr = v2[0];
+  float x2_curr = v3[0];
+
+  for (int y = v2[1]; y >= v1[1]; y--) {
+    canvas_line(canvas, (Point) {x1_curr, y}, (Point) {x2_curr, y});
+    x1_curr += x1_step;
+    x2_curr += x2_step;
+  }
 }

@@ -15,7 +15,6 @@
 #define HEIGHT 200
 #define SCALE_X 5
 #define SCALE_Y 5
-#define CAMERA_Y_LOCK PI2
 #define SPEED 0.1
 #define CAMERA_SPEED PI4 * 1e-1
 #define INTERVAL 3e1
@@ -32,6 +31,7 @@ typedef int32_t  i32;
 u8 is_inside_triangle(i16 x, i16 y, Tri tri);
 f32 cross_product_2d(Vec3 v1, Vec3 v2);
 f32 dot_product(Vec3 v1, Vec3 v2);
+void handle_key(SDL_Event ev);
 
 // ---
 
@@ -39,7 +39,6 @@ Canvas canvas = { NULL, NULL, WIDTH, HEIGHT, SCALE_X, SCALE_Y };
 View view =     { 0.01, 1000, PI2, WIDTH / HEIGHT };
 Camera cam =    { 0, 0, -9 };
 
-f32 ry;
 Tri tri, tri_proj;
 Vec3 normal;
 u8 light;
@@ -47,25 +46,18 @@ u8 light;
 i32 mouse_x, mouse_y;
 u8 mouse_state;
 
-#include "control.h"
-
 // ---
 
 void loop() {
-  ry += TAU / 1e3;
-
   for (u16 i = 0; i < LEN(OBJ); i++) {
     for (u8 p = 0; p < 3; p++) 
       for (u8 c = 0; c < 3; c++)
         tri[p][c] = OBJ[i][p][c];
 
-    // Place object and rotate
-    render_rotate(tri, (Vec3) { PI4, ry, 0 });
-
     // Move world based on cam position
-    render_translate(tri, (Vec3) { -cam.pos[0], -cam.pos[1], -cam.pos[2] });
-    render_rotate(tri, (Vec3) { 0, 0, -cam.ang[1] * sin(cam.ang[0]) });
-    render_rotate(tri, (Vec3) { -cam.ang[1] * cos(cam.ang[0]), -cam.ang[0], 0 });
+    render_rotate(tri, (Vec3) { -cam.ang[1], 0, 0 });
+    render_rotate(tri, (Vec3) { 0, -cam.ang[0], 0 });
+    render_translate(tri, (Vec3) { cam.pos[0], -cam.pos[1], -cam.pos[2] });
 
     render_create_normal(tri, normal);
     if (normal[0] * tri[0][0] + normal[1] * tri[0][1] + normal[2] * tri[0][2] > 0 || tri[0][2] < view.near && tri[1][2] < view.near && tri[2][2] < view.near) continue;
@@ -110,14 +102,48 @@ u8 is_inside_triangle(i16 x, i16 y, Tri tri) {
   Vec3 n1c = { tri[1][0] - tri[0][0], tri[1][1] - tri[0][1] };
   Vec3 n2c = { tri[2][0] - tri[1][0], tri[2][1] - tri[1][1] };
   Vec3 n3c = { tri[0][0] - tri[2][0], tri[0][1] - tri[2][1] };
-  Vec3 n1 = { tri[0][0] - tri[1][0], tri[0][1] - tri[1][1] };
-  Vec3 n2 = { tri[1][0] - tri[2][0], tri[1][1] - tri[2][1] };
-  Vec3 n3 = { tri[2][0] - tri[0][0], tri[2][1] - tri[0][1] };
-
+  Vec3 n1 =  { tri[0][0] - tri[1][0], tri[0][1] - tri[1][1] };
+  Vec3 n2 =  { tri[1][0] - tri[2][0], tri[1][1] - tri[2][1] };
+  Vec3 n3 =  { tri[2][0] - tri[0][0], tri[2][1] - tri[0][1] };
   Vec3 pn1 = { x - tri[0][0], y - tri[0][1] };
   Vec3 pn2 = { x - tri[1][0], y - tri[1][1] };
   Vec3 pn3 = { x - tri[2][0], y - tri[2][1] };
 
-  return (cross_product_2d(n1c, pn1) >= 0 && cross_product_2d(n2c, pn2) >= 0 && cross_product_2d(n3c, pn3) >= 0 ||
-      cross_product_2d(n1, pn1) >= 0 && cross_product_2d(n2, pn2) >= 0 && cross_product_2d(n3, pn3) >= 0);
+  return (cross_product_2d(n1c, pn1) > 0 && cross_product_2d(n2c, pn2) > 0 && cross_product_2d(n3c, pn3) > 0 ||
+      cross_product_2d(n1, pn1) > 0 && cross_product_2d(n2, pn2) > 0 && cross_product_2d(n3, pn3) > 0);
 }
+
+void handle_key(SDL_Event ev) {
+  switch (ev.key.keysym.sym) {
+    case 97: // A
+      cam.pos[0] -= SPEED;
+      break;
+    case 100: // D
+      cam.pos[0] += SPEED;
+      break;
+    case 119: // W
+      cam.pos[2] -= SPEED;
+      break;
+    case 115: // S
+      cam.pos[2] += SPEED;
+      break;
+    case 101: // E
+      cam.pos[1] -= SPEED;
+      break;
+    case 113: // Q
+      cam.pos[1] += SPEED;
+      break;
+    case 1073741904: // LEFT
+      cam.ang[0] -= CAMERA_SPEED;
+      break;
+    case 1073741903: // RIGHT
+      cam.ang[0] += CAMERA_SPEED;
+      break;
+    case 1073741906: // UP
+      cam.ang[1] -= CAMERA_SPEED;
+      break;
+    case 1073741905: // DOWN
+      cam.ang[1] += CAMERA_SPEED;
+      break;
+  }
+} 

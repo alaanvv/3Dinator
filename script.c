@@ -27,6 +27,7 @@ typedef uint16_t u16;
 typedef uint32_t u32;
 typedef int8_t   i8;
 typedef int16_t  i16;
+typedef int32_t  i32;
 
 u8 is_inside_triangle(i16 x, i16 y, Tri tri);
 f32 cross_product_2d(Vec3 v1, Vec3 v2);
@@ -41,6 +42,10 @@ Camera cam =    { 0, 0, -9 };
 f32 ry;
 Tri tri, tri_proj;
 Vec3 normal;
+u8 light;
+
+i32 mouse_x, mouse_y;
+u8 mouse_state;
 
 #include "control.h"
 
@@ -65,14 +70,13 @@ void loop() {
     render_create_normal(tri, normal);
     if (normal[0] * tri[0][0] + normal[1] * tri[0][1] + normal[2] * tri[0][2] > 0 || tri[0][2] < view.near && tri[1][2] < view.near && tri[2][2] < view.near) continue;
 
-    u8 light = 255 * (dot_product(normal, (Vec3) { 0, 0, -0.8 }) + 1) * 0.5;
+    light = 255 * (dot_product(normal, (Vec3) { 0, 0, -0.8 }) + 1) * 0.5;
     canvas_color(canvas, (Color) { light, light, light, 255 });
     render_project(view, tri, tri_proj, canvas.width, canvas.height);
     canvas_fill_triangle(canvas, tri_proj[0], tri_proj[1], tri_proj[2]); 
 
-    int mouse_x, mouse_y;
-    u8 mouse_state = SDL_BUTTON(SDL_GetMouseState(&mouse_x, &mouse_y));
-    if (mouse_state == 1) printf("aha\n");
+    mouse_state = SDL_BUTTON(SDL_GetMouseState(&mouse_x, &mouse_y));
+    if (mouse_state == 1) {} // Clicked
     mouse_x /= SCALE_X;
     mouse_y /= SCALE_Y;
 
@@ -102,11 +106,7 @@ inline f32 dot_product(Vec3 v1, Vec3 v2) { return v1[0] * v2[0] + v1[1] * v2[1] 
 inline f32 cross_product_2d(Vec3 v1, Vec3 v2) { return v1[0] * v2[1] - v1[1] * v2[0]; }
 
 u8 is_inside_triangle(i16 x, i16 y, Tri tri) {
-  // c stands for clockwise, 
-  // cuz apparently somehow 
-  // I did the mesh wrong and 
-  // it passed by the first 
-  // normal check
+  // c stands for clockwise, cuz apparently somehow I did the mesh wrong and it passed by the first normal check
   Vec3 n1c = { tri[1][0] - tri[0][0], tri[1][1] - tri[0][1] };
   Vec3 n2c = { tri[2][0] - tri[1][0], tri[2][1] - tri[1][1] };
   Vec3 n3c = { tri[0][0] - tri[2][0], tri[0][1] - tri[2][1] };
@@ -119,5 +119,5 @@ u8 is_inside_triangle(i16 x, i16 y, Tri tri) {
   Vec3 pn3 = { x - tri[2][0], y - tri[2][1] };
 
   return (cross_product_2d(n1c, pn1) >= 0 && cross_product_2d(n2c, pn2) >= 0 && cross_product_2d(n3c, pn3) >= 0 ||
-          cross_product_2d(n1, pn1) >= 0 && cross_product_2d(n2, pn2) >= 0 && cross_product_2d(n3, pn3) >= 0);
+      cross_product_2d(n1, pn1) >= 0 && cross_product_2d(n2, pn2) >= 0 && cross_product_2d(n3, pn3) >= 0);
 }

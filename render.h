@@ -44,11 +44,11 @@ void render_project(View view, Tri from, Tri to, u16 width, u16 height) {
     to[i][0] =  from[i][0] * view.proj_vec[0];
     to[i][1] = -from[i][1] * view.proj_vec[1];
 
-    if (from[i][2]) {
+    if (from[i][2] > 1) {
       to[i][0] /= from[i][2];
       to[i][1] /= from[i][2];
     }
-    
+
     to[i][0] = trunc((to[i][0] + 1) * 0.5 * width);
     to[i][1] = trunc((to[i][1] + 1) * 0.5 * height);
   }
@@ -77,56 +77,62 @@ void render_create_normal(Tri tri, Vec3 normal) {
   normal[2] /= l;
 }
 
+void render_translate_vec(Vec3 vec, Vec3 translate_vec) {
+  vec[0] += translate_vec[0];
+  vec[1] += translate_vec[1];
+  vec[2] += translate_vec[2];
+}
+
 void render_translate(Tri tri, Vec3 vec) {
-  tri[0][0] += vec[0];
-  tri[1][0] += vec[0];
-  tri[2][0] += vec[0];
+  render_translate_vec(tri[0], vec);
+  render_translate_vec(tri[1], vec);
+  render_translate_vec(tri[2], vec);
+}
 
-  tri[0][1] += vec[1];
-  tri[1][1] += vec[1];
-  tri[2][1] += vec[1];
+void render_rotate_vec(Vec3 vec, Vec3 rotate_vec) {
+    Vec3 buffer = { vec[0], vec[1], vec[2] };
 
-  tri[0][2] += vec[2];
-  tri[1][2] += vec[2];
-  tri[2][2] += vec[2];
+    if (rotate_vec[0]) {
+      f32 cos_t = cos(rotate_vec[0]), sin_t = sin(rotate_vec[0]);
+      vec[1] =  cos_t * buffer[1] + sin_t * buffer[2];
+      vec[2] = -sin_t * buffer[1] + cos_t * buffer[2];
+
+      buffer[1] = vec[1];
+      buffer[2] = vec[2];
+    }
+
+    if (rotate_vec[1]) {
+      f32 cos_t = cos(rotate_vec[1]), sin_t = sin(rotate_vec[1]);
+      vec[0] = cos_t * vec[0] + -sin_t * vec[2];
+      vec[2] = sin_t * buffer[0] +  cos_t * vec[2];
+
+      buffer[0] = vec[0];
+      buffer[2] = vec[2];
+    }
+
+    if (rotate_vec[2]) {
+      f32 cos_t = cos(rotate_vec[2]), sin_t = sin(rotate_vec[2]);
+      vec[0] =  cos_t * vec[0] + sin_t * vec[1];
+      vec[1] = -sin_t * buffer[0] + cos_t * vec[1];
+    }
+
 }
 
 void render_rotate(Tri tri, Vec3 vec) {
-  for (u8 i = 0; i < 3; i++) {
-    Vec3 buffer = { tri[i][0], tri[i][1], tri[i][2] };
+  render_rotate_vec(tri[0], vec);
+  render_rotate_vec(tri[1], vec);
+  render_rotate_vec(tri[2], vec);
+}
 
-      f32 cos_t = cos(vec[0]), sin_t = sin(vec[0]);
-      tri[i][1] =  cos_t * buffer[1] + sin_t * buffer[2];
-      tri[i][2] = -sin_t * buffer[1] + cos_t * buffer[2];
+void render_scale_vec(Vec3 vec, Vec3 scale_vec) {
+  vec[0] *= scale_vec[0];
+  vec[1] *= scale_vec[1];
+  vec[2] *= scale_vec[2];
 
-      buffer[1] = tri[i][1];
-      buffer[2] = tri[i][2];
-    if (vec[1]) {
-      f32 cos_t = cos(vec[1]), sin_t = sin(vec[1]);
-      tri[i][0] = cos_t * tri[i][0] + -sin_t * tri[i][2];
-      tri[i][2] = sin_t * buffer[0] +  cos_t * tri[i][2];
-
-      buffer[0] = tri[i][0];
-      buffer[2] = tri[i][2];
-    }
-    if (vec[2]) {
-      f32 cos_t = cos(vec[2]), sin_t = sin(vec[2]);
-      tri[i][0] =  cos_t * tri[i][0] + sin_t * tri[i][1];
-      tri[i][1] = -sin_t * buffer[0] + cos_t * tri[i][1];
-    }
-  }
 }
 
 void render_scale(Tri tri, Vec3 vec) {
-  tri[0][0] *= vec[0];
-  tri[1][0] *= vec[0];
-  tri[2][0] *= vec[0];
-
-  tri[0][1] *= vec[1];
-  tri[1][1] *= vec[1];
-  tri[2][1] *= vec[1];
-
-  tri[0][2] *= vec[2];
-  tri[1][2] *= vec[2];
-  tri[2][2] *= vec[2];
+  render_scale_vec(tri[0], vec);
+  render_scale_vec(tri[1], vec);
+  render_scale_vec(tri[2], vec);
 }

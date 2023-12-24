@@ -2,8 +2,8 @@
 #include <math.h>
 
 #define MIN(x, y) (x < y ? x : y)
-#define AMAX(x, y) (abs(x) > abs(y) ? abs(x) : abs(y))
 #define MAX(x, y) (x > y ? x : y)
+#define AMAX(x, y) (abs(x) > abs(y) ? abs(x) : abs(y))
 
 typedef char     c8;
 typedef float    f32;
@@ -24,11 +24,12 @@ typedef struct {
 } Canvas;
 
 typedef struct { u8 R; u8 G; u8 B; u8 A; } Color;
+typedef i16 iVec2[3];
 typedef f64 Point[2];
 
 static inline void canvas_color(Canvas canvas, Color color) { SDL_SetRenderDrawColor(canvas.renderer, color.R, color.G, color.B, color.A); }
 static inline void canvas_dot(Canvas canvas, Point point)   { SDL_RenderDrawPoint(canvas.renderer, point[0], point[1]); }
-static inline void canvas_title(Canvas canvas, c8 title[])    { SDL_SetWindowTitle(canvas.window, title); }
+static inline void canvas_title(Canvas canvas, c8 title[])  { SDL_SetWindowTitle(canvas.window, title); }
 static inline void canvas_display(Canvas canvas)            { SDL_RenderPresent(canvas.renderer); }
 static inline void canvas_clear(Canvas canvas)              { SDL_RenderClear(canvas.renderer); }
 static inline void canvas_delay(u16 ms)                     { SDL_Delay(ms); }
@@ -136,4 +137,3 @@ void canvas_fill_triangle(Canvas canvas, Point v1, Point v2, Point v3) {
     fill(v1, v2, v4, 0);
   }
 }
-

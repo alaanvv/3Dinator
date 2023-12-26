@@ -1,3 +1,5 @@
+// TODO Get my own drawing functions back, so that I can use depth buffer
+
 #include "render.h"
 #include "mesh.h"
 
@@ -8,10 +10,10 @@
 #define PI4 PI * 0.25
 
 #define OBJ bottle 
-#define WIDTH 1000
-#define HEIGHT 1000
-#define SCALE_X 1
-#define SCALE_Y 1
+#define WIDTH 100
+#define HEIGHT 100
+#define SCALE_X 10
+#define SCALE_Y 10
 #define CAMERA_Y_LOCK PI2
 #define SPEED 0.1
 #define CAMERA_SPEED PI4 * 1e-1
@@ -33,9 +35,9 @@ f32 dot_product(Vec3 v1, Vec3 v2);
 
 // ---
 
-Canvas canvas = { NULL, NULL, WIDTH, HEIGHT, SCALE_X, SCALE_Y };
+Canvas canvas = { NULL, NULL, NULL, WIDTH, HEIGHT, SCALE_X, SCALE_Y };
 View view =     { 0.01, 1000, PI2, WIDTH / HEIGHT };
-Camera cam =    { 0, 0, 0 };
+Camera cam =    { 0, 0, -10 };
 
 Tri tri, tri_proj;
 Vec3 normal;
@@ -46,9 +48,8 @@ u8 light;
 // ---
 
 void loop() {
-  for (u16 i = 0; i < LEN(cube); i++) {
-    copy_triangle_to_buffer(cube[i]);
-    render_scale(tri, (Vec3) { 10, 10, 10 });
+  for (u16 i = 0; i < LEN(OBJ); i++) {
+    copy_triangle_to_buffer(OBJ[i]);
     transform_against_camera(tri);
 
     render_create_normal(tri, normal);
@@ -86,7 +87,7 @@ u8 main() {
       if (ev.type == SDL_QUIT) return 0; 
       else if (ev.type == SDL_KEYDOWN) handle_key(ev);
 
-    canvas_update(canvas, INTERVAL);
     loop();
+    canvas_update(canvas, INTERVAL);
   }
 }

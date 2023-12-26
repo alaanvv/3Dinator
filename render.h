@@ -41,16 +41,24 @@ void render_proj_vec(View* view) {
 
 void render_project(View view, Tri from, Tri to, u16 width, u16 height) {
   for (u8 i = 0; i < 3; i++) {
-    to[i][0] =  from[i][0] * view.proj_vec[0];
-    to[i][1] = -from[i][1] * view.proj_vec[1];
+    // Method 1:
+    f32 perspective = tan(view.fov / 2) * 0.5 * (from[i][2] > 1 ? from[i][2] : 1);
+    to[i][0] =  from[i][0] / perspective;
+    to[i][1] = -from[i][1] / perspective;
 
-    if (from[i][2] > 1) {
-      to[i][0] /= from[i][2];
-      to[i][1] /= from[i][2];
-    }
-
+    // Method 2:
+//    to[i][0] = from[i][0] * view.proj_vec[0];
+//    to[i][1] = -from[i][1] * view.proj_vec[1];
+//
+//    if (from[i][2] > 1) {
+//      to[i][0] /= from[i][2];
+//      to[i][1] /= from[i][2];
+//    }
+    
+    // General
     to[i][0] = trunc((to[i][0] + 1) * 0.5 * width);
     to[i][1] = trunc((to[i][1] + 1) * 0.5 * height);
+    to[i][2] = from[i][2];
   }
 }
 

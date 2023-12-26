@@ -1,3 +1,6 @@
+#define MAX(x, y) (x > y ? x : y)
+#define MIN(x, y) (x < y ? x : y)
+
 void handle_key(SDL_Event ev) {
   switch (ev.key.keysym.sym) {
     case 97: // A

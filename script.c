@@ -48,17 +48,16 @@ u8 light;
 void loop() {
   for (u16 i = 0; i < LEN(cube); i++) {
     copy_triangle_to_buffer(cube[i]);
+    render_scale(tri, (Vec3) { 10, 10, 10 });
     transform_against_camera(tri);
 
     render_create_normal(tri, normal);
-    if (behind_camera(tri)) continue;
+    if (dot_product(tri[0], normal) > 0 || behind_camera(tri)) continue;
+
+    render_project(view, tri, tri_proj, canvas.width, canvas.height);
 
     light = 255 * (dot_product(normal, (Vec3) { 0, 0, -0.8 }) + 1) * 0.5;
-    canvas_color(canvas, (Color) { light, light, light, 255 });
-    render_project(view, tri, tri_proj, canvas.width, canvas.height);
-    canvas_fill_triangle(canvas, tri_proj[0], tri_proj[1], tri_proj[2]); 
-    canvas_color(canvas, (Color) { 0, 0, 0, 255 });
-    canvas_triangle(canvas, tri_proj[0], tri_proj[1], tri_proj[2]); 
+    canvas_triangle(canvas, (Tri2D) { tri_proj[0][0], tri_proj[0][1], tri_proj[1][0], tri_proj[1][1], tri_proj[2][0], tri_proj[2][1] }, light);
   }
 }
 
@@ -69,9 +68,9 @@ void transform_against_camera(Tri tri) {
 }
 
 void copy_triangle_to_buffer(Tri from) {
-    for (u8 p = 0; p < 3; p++) 
-      for (u8 c = 0; c < 3; c++)
-        tri[p][c] = from[p][c];
+  for (u8 p = 0; p < 3; p++) 
+    for (u8 c = 0; c < 3; c++)
+      tri[p][c] = from[p][c];
 }
 
 inline u8  behind_camera(Tri tri) { return tri[0][2] < view.near && tri[1][2] < view.near && tri[2][2] < view.near; }

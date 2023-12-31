@@ -20,3 +20,31 @@ void main() {
   _color = uniform_color;
 }
 ```
+
+Fractal
+```glsl
+# version 330 core
+
+uniform float time;
+
+in  vec2 _pos;
+out vec4 color;
+
+vec3 palette(float t) {
+  vec3 a = vec3(0.5, 0.5, 0.5);
+  vec3 b = vec3(0.5, 0.5, 0.5);
+  vec3 c = vec3(1.0, 1.0, 1.0);
+  vec3 d = vec3(0.263,0.416,0.557);
+
+  return a + b*cos( 6.28318*(c*t+d) );
+}
+
+void main() {
+  float dis = length(_pos) - 0.1;
+  dis = abs(4 / dis / 5);
+  float col = smoothstep(1, dis, 0.5);
+  col = fract(dis * sin(time) * 0.1);
+  col = 1 / col;
+  color = vec4(palette(col), 1);
+}
+```

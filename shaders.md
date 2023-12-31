@@ -23,8 +23,6 @@ void main() {
 
 Fractal
 ```glsl
-# version 330 core
-
 uniform float time;
 
 in  vec2 _pos;

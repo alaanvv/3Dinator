@@ -3,6 +3,9 @@
 #include <cglm/cglm.h>
 #include <stdio.h>
 
+#define MIN(x, y) (x < y ? x : y)
+#define MAX(x, y) (x > y ? x : y)
+#define CLAMP(x, y, z) (MAX(MIN(z, y), x))
 #define ASSERT(x, ...) if (!(x)) { printf(__VA_ARGS__); exit(1); }
 #define UNI(shader, name) (glGetUniformLocation(shader, name))
 #define PI  3.14159
@@ -16,7 +19,10 @@
 #define TEXTURE_1 "img/ilu.ppm"
 #define WIDTH  800
 #define HEIGHT 800
-#define MOVEMENT_SPEED 0.01
+#define MOVEMENT_SPEED 0.1
+#define CAMERA_SPEED 0.05
+#define CAMERA_LOCK PI4
+#define OBJ cube
 
 typedef uint8_t  u8;
 typedef uint16_t u16;
@@ -32,11 +38,18 @@ typedef double   f64;
 typedef struct { f32 R, G, B, A; } RGBA;
 
 typedef struct {
+  vec3 pos;
+  vec2 tex;
+} Vertice;
+
+typedef Vertice Mesh[];
+
+typedef struct {
   i16 width, height;
   f32 fov, near, far;
 
-  f32 pos[3];
-  f32 ang[2];
+  vec3 pos, dir, rig;
+  f32 yaw, pitch;
 } Camera;
 
 typedef struct {
@@ -62,60 +75,15 @@ u32 canvas_create_EBO();
 
 // --- Setup
 
+#include "mesh.h" 
+
 u8 wireframe_mode;
 
 Canvas canvas = { NULL, WIDTH, HEIGHT };
-Camera cam = { WIDTH, HEIGHT, PI4, 0.1, 100, { 0, 0, 0 }, { 0, 0 } };
-
-f32 vertices[] = {
-  // Face
-  -0.5, -0.5, -0.5,  0, 0,
-  0.5, -0.5, -0.5,  0.333, 0,
-  0.5,  0.5, -0.5,  0.333, 1,
-  0.5,  0.5, -0.5,  0.333, 1,
-  -0.5,  0.5, -0.5,  0, 1,
-  -0.5, -0.5, -0.5,  0, 0,
-
-  // Back
-  -0.5, -0.5,  0.5,  0.666, 0,
-  0.5, -0.5,  0.5,  1, 0,
-  0.5,  0.5,  0.5,  1, 1,
-  0.5,  0.5,  0.5,  1, 1,
-  -0.5,  0.5,  0.5,  0.666, 1,
-  -0.5, -0.5,  0.5,  0.666, 0,
-
-  -0.5,  0.5,  0.5,  0.666, 1,
-  -0.5,  0.5, -0.5,  1, 1,
-  -0.5, -0.5, -0.5,  1, 0,
-  -0.5, -0.5, -0.5,  1, 0,
-  -0.5, -0.5,  0.5,  0.666, 0,
-  -0.5,  0.5,  0.5,  0.666, 1,
-
-  0.5,  0.5,  0.5,  0.666, 1,
-  0.5,  0.5, -0.5,  1, 1,
-  0.5, -0.5, -0.5,  1, 0,
-  0.5, -0.5, -0.5,  1, 0,
-  0.5, -0.5,  0.5,  0.666, 0,
-  0.5,  0.5,  0.5,  0.666, 1,
-
-  // Up
-  -0.5, -0.5, -0.5,  0.333, 1,
-  0.5, -0.5, -0.5,  .666, 1,
-  0.5, -0.5,  0.5,  .666, 0,
-  0.5, -0.5,  0.5,  .666, 0,
-  -0.5, -0.5,  0.5,  0.333, 0,
-  -0.5, -0.5, -0.5,  0.333, 1,
-
-  // Bottom
-  -0.5,  0.5, -0.5,  0.333, 1,
-  0.5,  0.5, -0.5,  .666, 1,
-  0.5,  0.5,  0.5,  .666, 0,
-  0.5,  0.5,  0.5,  .666, 0,
-  -0.5,  0.5,  0.5,  0.333, 0,
-  -0.5,  0.5, -0.5,  0.333, 1
-};
+Camera cam = { WIDTH, HEIGHT, PI4, 0.1, 100, { 0, 0, 10 }, { 0, 0, -1 }, { 1, 0, 0 } };
 
 mat4 view, proj;
+f32  last_frame, fps;
 
 // --- Main
 
@@ -131,7 +99,7 @@ i8 main() {
   glEnableVertexAttribArray(0);
   glEnableVertexAttribArray(1);
 
-  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(OBJ), OBJ, GL_STATIC_DRAW);
 
   u32 shader_program = shader_create_program(VERTEX_SHADER, FRAGMENT_SHADER);
 
@@ -143,61 +111,19 @@ i8 main() {
   generate_proj_mat(cam, proj);
   generate_view_mat(cam, view);
 
-  vec3 poss[] = {
-    { -3/2, 10, -10 },
-    { 6/2, 15, -5 },
-    { -8/2, 12, -5 },
-    { 3/2, 9, -12 },
-    { -4/2, 10, -3 },
-    { 3/2, 15, -4 },
-    { -2/2, 11, -5 },
-    { 3/2, 16, -3 },
-    { -5/2, 7, -1 },
-    { 9/2, 13, -3 },
-    { -9/2, 18, -10 },
-    { -7/2, 8, -8 },
-    { 8/2, 14, -6 },
-    { -10/2, 11, -7 },
-    { 4/2, 8, -15 },
-    { -5/2, 9, -2 },
-    { 4/2, 14, -3 },
-    { -4/2, 10, -6 },
-    { 5/2, 15, -2 },
-    { -6/2, 6, 0 },
-    { 10/2, 12, -2 },
-    { -10/2, 17, -9 },
-    { -6/2, 16, -1 },
-    { 7/2, 10, -10 },
-    { -2/2, 15, -8 },
-    { 8/2, 9, -11 },
-    { -3/2, 14, -4 },
-    { 6/2, 17, -7 },
-    { -9/2, 13, -5 },
-    { 11/2, 18, -9 },
-    { -8/2, 19, -8 },
-  };
-
   while (!glfwWindowShouldClose(canvas.window)) {
-    canvas_clear((RGBA) { 0.835, 0.741, 0.686, 1 });
-
-    for (u8 i = 0; i < 30; i++) {
-      glm_mat4_identity(model);
-      glm_translate(model, poss[i]);
-      glm_rotate(model, glfwGetTime() * tan(i + 3), (vec3) { 0.5, 0.2, 0 });
-      poss[i][1] -= 0.05;
-      if (poss[i][1] / poss[i][2] > 1) poss[i][1] = abs(poss[i][2]);
-      glUniformMatrix4fv(UNI(shader_program, "MODEL"), 1, GL_FALSE, (const f32*) { model[0] });
-      glDrawArrays(GL_TRIANGLES, 0, 36);
-    }
-
-    // Re-send some matrices that might have changed
-    glUniformMatrix4fv(UNI(shader_program, "PROJ"),  1, GL_FALSE, (const f32*) { proj[0]  });
-    glUniformMatrix4fv(UNI(shader_program, "VIEW"),  1, GL_FALSE, (const f32*) { view[0]  });
-
+    glm_mat4_identity(model);
+    glm_rotate(model, glfwGetTime(), (vec3) { 0.5, 0.2, 0 });
+    glUniformMatrix4fv(UNI(shader_program, "MODEL"), 1, GL_FALSE, (const f32*) { model[0] });
+    glDrawArrays(GL_TRIANGLES, 0, 36);
 
     glfwSwapBuffers(canvas.window); 
     glfwPollEvents();
-    handle_inputs(canvas.window);    
+    handle_inputs(canvas.window);
+    canvas_clear((RGBA) { 0.8, 0.7, 0.7, 1 });
+
+    glUniformMatrix4fv(UNI(shader_program, "PROJ"),  1, GL_FALSE, (const f32*) { proj[0] });
+    glUniformMatrix4fv(UNI(shader_program, "VIEW"),  1, GL_FALSE, (const f32*) { view[0] });
   }
 
   glfwTerminate();
@@ -212,8 +138,12 @@ void generate_proj_mat(Camera cam, mat4 to) {
 }
 
 void generate_view_mat(Camera cam, mat4 to) {
-  glm_mat4_identity(to);
-  glm_translate(view, (vec3) { -cam.pos[0], -cam.pos[1], -cam.pos[2] });
+  vec3 target, up;
+  glm_cross(cam.dir, cam.rig, up);
+  up[1] *= -1;
+
+  glm_vec3_add(cam.pos, cam.dir, target);
+  glm_lookat(cam.pos, target, up, to);
 }
 
 void canvas_init(Canvas* canvas) {
@@ -279,24 +209,53 @@ void key_callback(GLFWwindow* window, i32 key, i32 scancode, i32 action, i32 mod
 
 void handle_inputs(GLFWwindow* window) {
   u8 should_reload_view, should_reload_proj;
+  inline void rv() { should_reload_view = 1; } 
+  inline void rp() { should_reload_proj = 1; }
+  inline void rotate_cam(vec3 dir) {
+    if (dir[1]) {
+      mat4 rot;
+      glm_mat4_identity(rot);
+      glm_rotate(rot, CAMERA_SPEED, (vec3) { 0, dir[1], 0 });
+      glm_mat4_mulv3(rot, cam.dir, 1, cam.dir);
+      glm_mat4_mulv3(rot, cam.rig, 1, cam.rig);
+    }
+    if (dir[0]) {
+      f32 ang = CLAMP(-CAMERA_LOCK, cam.dir[1] + CAMERA_SPEED * dir[0], CAMERA_LOCK);
 
-  if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) 
-  { cam.pos[2] += MOVEMENT_SPEED; should_reload_view = 1; }
-  if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-  { cam.pos[2] -= MOVEMENT_SPEED; should_reload_view = 1; }
-  if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-  { cam.pos[0] -= MOVEMENT_SPEED; should_reload_view = 1; }
-  if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-  { cam.pos[0] += MOVEMENT_SPEED; should_reload_view = 1; }
-  if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
-  { cam.pos[1] += MOVEMENT_SPEED; should_reload_view = 1; }
-  if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
-  { cam.pos[1] -= MOVEMENT_SPEED; should_reload_view = 1; }
+      cam.dir[1] = ang;
+    }
 
-  if (glfwGetKey(window, GLFW_KEY_O) == GLFW_PRESS)
-  { cam.fov += PI / 100; should_reload_proj = 1; }
-  if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS)
-  { cam.fov -= PI / 100; should_reload_proj = 1; }
+    rv();
+  }
+  inline void move_cam(vec3 dir) {
+    vec3 move;
+    if (dir[0]) {
+      glm_vec3_scale(cam.rig, dir[0], move);
+      glm_vec3_add(cam.pos, move, cam.pos);
+    }
+    else if (dir[2]) {
+      glm_vec3_scale(cam.dir, dir[2], move);
+      glm_vec3_add(cam.pos, move, cam.pos);
+    }
+    else cam.pos[1] += dir[1];
+
+    rv();
+  }
+
+  if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) move_cam((vec3) {  0,  0,  MOVEMENT_SPEED });
+  if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) move_cam((vec3) {  0,  0, -MOVEMENT_SPEED });
+  if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) move_cam((vec3) {  MOVEMENT_SPEED,  0,  0 });
+  if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) move_cam((vec3) { -MOVEMENT_SPEED,  0,  0 });
+  if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) move_cam((vec3) {  0,  MOVEMENT_SPEED,  0 });
+  if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) move_cam((vec3) {  0, -MOVEMENT_SPEED,  0 });
+
+  if (glfwGetKey(window, GLFW_KEY_I) == GLFW_PRESS) rotate_cam((vec3) {  1,  0 });
+  if (glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS) rotate_cam((vec3) { -1,  0 });
+  if (glfwGetKey(window, GLFW_KEY_J) == GLFW_PRESS) rotate_cam((vec3) {  0,  1 });
+  if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS) rotate_cam((vec3) {  0, -1 }); 
+
+  if (glfwGetKey(window, GLFW_KEY_O) == GLFW_PRESS) { cam.fov += PI / 100; rp(); }
+  if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) { cam.fov -= PI / 100; rp(); }
 
   if (should_reload_view) generate_view_mat(cam, view);
   if (should_reload_proj) generate_proj_mat(cam, proj);

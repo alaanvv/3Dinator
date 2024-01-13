@@ -3,6 +3,8 @@
 #include <cglm/cglm.h>
 #include <stdio.h>
 
+#define PI 3.14159
+#define PI2 PI / 2
 #define ASSERT(x, ...) if (!(x)) { printf(__VA_ARGS__); exit(1); }
 
 typedef uint16_t u16;
@@ -18,17 +20,11 @@ typedef struct {
 } RGBA;
 
 typedef struct {
-  vec3 pos;
-  vec2 tex;
-} Vertice;
-
-typedef Vertice Mesh[];
-
-typedef struct {
   i16 width, height;
   f32 fov, near, far;
 
   vec3 pos, dir, rig;
+  f32  pitch, yaw;
 } Camera;
 
 typedef struct {
@@ -124,6 +120,7 @@ u32 canvas_create_texture(GLenum unit, char path[], u32 shader, char uniform_nam
   free(image_buffer);
   return texture_ID;
 }
+
 u32 canvas_create_VBO() {
   u32 VBO;
   glGenBuffers(1, &VBO);

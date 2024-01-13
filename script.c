@@ -44,7 +44,6 @@ f32 last_mouse_x, last_mouse_y;
 u32 shader, shader_lig;
 
 vec3 c_lig = { 1, 1, 1 };
-i16 spc_shine = 256;
 
 u8 toggle;
 
@@ -65,8 +64,7 @@ i8 main() {
   glEnableVertexAttribArray(1);
 
   u32 VAO_light = canvas_create_VAO();
-  u32 VBO_light = canvas_create_VBO();
-  glBufferData(GL_ARRAY_BUFFER, sizeof(cube), cube, GL_STATIC_DRAW);
+  u32 VBO_light = VBO_cube;
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(f32), (void*) 0);
   glEnableVertexAttribArray(0);
 
@@ -77,7 +75,6 @@ i8 main() {
   glUseProgram(shader);
   glUniform3f(UNI(shader, "C_LIG"), c_lig[0], c_lig[1], c_lig[2]);
   glUniform3f(UNI(shader, "P_LIG"), 0, 0, 0);
-  glUniform1i(UNI(shader, "SPC_SHINE"), spc_shine);
 
   generate_proj_mat(cam, proj);
   generate_view_mat(cam, view);
@@ -189,10 +186,6 @@ void handle_inputs(GLFWwindow* window) {
   // FOV
   if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) { cam.fov = MIN(cam.fov + PI / 100, FOV); generate_proj_mat(cam, proj); }
   if (glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS) { cam.fov = MAX(cam.fov - PI / 100, 0.1); generate_proj_mat(cam, proj); }
-
-  // Shineness
-  if (glfwGetKey(window, GLFW_KEY_U) == GLFW_PRESS) { spc_shine = MIN(spc_shine + 5, 1024); glUniform1i(UNI(shader, "SPC_SHINE"), spc_shine); }
-  if (glfwGetKey(window, GLFW_KEY_Y) == GLFW_PRESS) { spc_shine = MAX(spc_shine - 5, 1);    glUniform1i(UNI(shader, "SPC_SHINE"), spc_shine); }
 }
 
 void mouse_callback(GLFWwindow* window, f64 x, f64 y) {

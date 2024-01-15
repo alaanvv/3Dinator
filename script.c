@@ -80,13 +80,16 @@ i8 main() {
   glUniform3f(UNI(shader, "MAT.dif"), 0.90754,  0.90754,  0.90754);
   glUniform3f(UNI(shader, "MAT.spc"), 0.508273, 0.508273, 0.508273);
   glUniform1f(UNI(shader, "MAT.shi"), 51.2);
+  canvas_create_texture(GL_TEXTURE0, "img/pmk.ppm", shader, "MAT.s_dif", 0);
+  canvas_create_texture(GL_TEXTURE1, "img/spc.ppm", shader, "MAT.s_spc", 1);
   glUniform3f(UNI(shader, "LIG.amb"), c_lig[0], c_lig[1], c_lig[2]);
   glUniform3f(UNI(shader, "LIG.dif"), c_lig[0], c_lig[1], c_lig[2]);
   glUniform3f(UNI(shader, "LIG.spc"), c_lig[0], c_lig[1], c_lig[2]);
-  glUniform3f(UNI(shader, "LIG.dir"), -1, 0, 0);
+  glUniform3f(UNI(shader, "LIG.pos"), 0, 0, 0);
+  glUniform1f(UNI(shader, "LIG.k"), 1);
+  glUniform1f(UNI(shader, "LIG.l"), 0.045);
+  glUniform1f(UNI(shader, "LIG.q"), 0.0075);
 
-  canvas_create_texture(GL_TEXTURE0, "img/pmk.ppm", shader, "MAT.s_dif", 0);
-  canvas_create_texture(GL_TEXTURE1, "img/spc.ppm", shader, "MAT.s_spc", 1);
 
   generate_proj_mat(cam, proj);
   generate_view_mat(cam, view);
@@ -175,7 +178,6 @@ i8 main() {
   while (!glfwWindowShouldClose(canvas.window)) {
     // Sun
     glm_mat4_identity(model);
-    glm_translate(model, (vec3) { 20, 0, 0 });
     glUseProgram(shader_lig);
     glUniformMatrix4fv(UNI(shader_lig, "MODEL"), 1, GL_FALSE, (const f32*) { model[0] });
     glUniformMatrix4fv(UNI(shader_lig, "PROJ"),  1, GL_FALSE, (const f32*) { proj[0] });

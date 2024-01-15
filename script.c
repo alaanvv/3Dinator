@@ -51,6 +51,7 @@ u8 toggle;
 
 i8 main() {
   canvas_init(&canvas, "Light");
+  canvas_config_texture(GL_CLAMP_TO_BORDER, GL_CLAMP_TO_BORDER, GL_NEAREST, GL_NEAREST);
   glfwSetInputMode(canvas.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
   glfwSetCursorPosCallback(canvas.window, mouse_callback);
   glfwSetKeyCallback(canvas.window, key_callback);
@@ -58,23 +59,34 @@ i8 main() {
   u32 VAO_cube = canvas_create_VAO();
   u32 VBO_cube = canvas_create_VBO();
   glBufferData(GL_ARRAY_BUFFER, sizeof(cube), cube, GL_STATIC_DRAW);
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(f32), (void*) 0);
-  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(f32), (void*) (3 * sizeof(f32)));
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(f32), (void*) 0);
+  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(f32), (void*) (3 * sizeof(f32)));
+  glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(f32), (void*) (6 * sizeof(f32)));
   glEnableVertexAttribArray(0);
   glEnableVertexAttribArray(1);
+  glEnableVertexAttribArray(2);
 
   u32 VAO_light = canvas_create_VAO();
   u32 VBO_light = VBO_cube;
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(f32), (void*) 0);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(f32), (void*) 0);
   glEnableVertexAttribArray(0);
 
-  shader_lig = shader_create_program("shd/v.glsl", "shd/f-light.glsl");
-  shader     = shader_create_program("shd/v.glsl", "shd/f.glsl");
+  shader_lig = shader_create_program("shd/obj.v", "shd/light.f");
+  shader     = shader_create_program("shd/obj.v", "shd/obj.f");
   glUseProgram(shader_lig);
   glUniform3f(UNI(shader_lig, "C_LIG"), c_lig[0], c_lig[1], c_lig[2]);
   glUseProgram(shader);
-  glUniform3f(UNI(shader, "C_LIG"), c_lig[0], c_lig[1], c_lig[2]);
-  glUniform3f(UNI(shader, "P_LIG"), 0, 0, 0);
+  glUniform3f(UNI(shader, "MAT.amb"), 0.19225,  0.19225,  0.19225);
+  glUniform3f(UNI(shader, "MAT.dif"), 0.50754,  0.50754,  0.50754);
+  glUniform3f(UNI(shader, "MAT.spc"), 0.508273, 0.508273, 0.508273);
+  glUniform1f(UNI(shader, "MAT.shi"), 51.2);
+  glUniform3f(UNI(shader, "LIG.amb"), c_lig[0], c_lig[1], c_lig[2]);
+  glUniform3f(UNI(shader, "LIG.dif"), c_lig[0], c_lig[1], c_lig[2]);
+  glUniform3f(UNI(shader, "LIG.spc"), c_lig[0], c_lig[1], c_lig[2]);
+  glUniform3f(UNI(shader, "LIG.pos"), 0, 0, 0);
+  canvas_create_texture(GL_TEXTURE0, "img/box.ppm", shader, "MAT.s_dif", 0);
+  canvas_create_texture(GL_TEXTURE1, "img/spc.ppm", shader, "MAT.s_spc", 1);
+  canvas_create_texture(GL_TEXTURE2, "img/emt.ppm", shader, "MAT.s_emt", 2);
 
   generate_proj_mat(cam, proj);
   generate_view_mat(cam, view);
@@ -88,7 +100,7 @@ i8 main() {
   f32 t_sa = r_rot();
   f32 t_ur = r_rot();
   f32 t_ne = r_rot();
-
+  
   while (!glfwWindowShouldClose(canvas.window)) {
     // Sun
     glm_mat4_identity(model);
@@ -114,7 +126,7 @@ i8 main() {
       glm_scale(model, (vec3) { size, size, size });
 
       glUniformMatrix4fv(UNI(shader, "MODEL"), 1, GL_FALSE, (const f32*) { model[0] });
-      glUniform3f(UNI(shader, "C_OBJ"), r, g, b);
+      glUniform3f(UNI(shader, "MAT.col"), r, g, b);
 
       glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, VBO_cube);
       glBindVertexArray(VAO_cube);
@@ -129,7 +141,7 @@ i8 main() {
     draw_planet(0.68, 0.58, 0.43, t_sa, 9, 0.3);
     draw_planet(0.28, 0.60, 0.67, t_ur, 10.75, 0.253);
     draw_planet(0.27, 0.44, 1.00, t_ne, 16.5, 0.25);
-    
+
     if (!toggle) { 
       t_me += TAU / 88;
       t_ve -= TAU / 225;

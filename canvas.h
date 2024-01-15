@@ -94,7 +94,6 @@ void load_image(char path[], f32 buffer[], u32 pixels) {
   fclose(img);
 }
 
-
 void canvas_config_texture(GLenum wrap_s, GLenum wrap_t, GLenum min_filter, GLenum mag_filter) {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap_s);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap_t);

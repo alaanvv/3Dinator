@@ -10,8 +10,13 @@ struct Light {
   vec3 amb, dif, spc, pos;
 };
 
+struct DirectionalLight {
+  vec3 amb, dif, spc, dir;
+};
+
+
 uniform Material MAT;
-uniform Light LIG;
+uniform DirectionalLight LIG;
 uniform vec3 P_CAM;
 
 in  vec3 nrm;
@@ -20,7 +25,7 @@ in  vec2 tex;
 out vec4 color;
 
 void main() {
-  vec3 light_dir =  normalize(LIG.pos - pos);
+  vec3 light_dir =  normalize(-LIG.dir);
   vec3 view_dir =   normalize(P_CAM - pos);
   vec3 reflect_dir = normalize(reflect(-light_dir, nrm));
 

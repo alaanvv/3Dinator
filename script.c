@@ -77,13 +77,13 @@ i8 main() {
   glUniform3f(UNI(shader_lig, "C_LIG"), c_lig[0], c_lig[1], c_lig[2]);
   glUseProgram(shader);
   glUniform3f(UNI(shader, "MAT.amb"), 0.29225,  0.29225,  0.29225);
-  glUniform3f(UNI(shader, "MAT.dif"), 0.70754,  0.70754,  0.70754);
+  glUniform3f(UNI(shader, "MAT.dif"), 0.90754,  0.90754,  0.90754);
   glUniform3f(UNI(shader, "MAT.spc"), 0.508273, 0.508273, 0.508273);
   glUniform1f(UNI(shader, "MAT.shi"), 51.2);
   glUniform3f(UNI(shader, "LIG.amb"), c_lig[0], c_lig[1], c_lig[2]);
   glUniform3f(UNI(shader, "LIG.dif"), c_lig[0], c_lig[1], c_lig[2]);
   glUniform3f(UNI(shader, "LIG.spc"), c_lig[0], c_lig[1], c_lig[2]);
-  glUniform3f(UNI(shader, "LIG.pos"), 0, 0, 0);
+  glUniform3f(UNI(shader, "LIG.dir"), -1, 0, 0);
 
   canvas_create_texture(GL_TEXTURE0, "img/pmk.ppm", shader, "MAT.s_dif", 0);
   canvas_create_texture(GL_TEXTURE1, "img/spc.ppm", shader, "MAT.s_spc", 1);
@@ -91,7 +91,7 @@ i8 main() {
   generate_proj_mat(cam, proj);
   generate_view_mat(cam, view);
 
-vec3 poss[30] = {
+  vec3 poss[78] = {
     {-6.00, 13.00, -9.00},
     {5.00, 6.00, 10.00},
     {-2.00, 11.00, 4.00},
@@ -121,12 +121,61 @@ vec3 poss[30] = {
     {5.00, 8.00, -9.00},
     {9.00, 0.00, -1.00},
     {-7.00, 7.00, -7.00},
-    {7.00, 2.00, 0.00}
-};
+    {7.00, 2.00, 0.00},
+    {15.00, 3.00, -10.00},
+    {-12.00, -18.00, 11.00},
+    {17.00, -16.00, -18.00},
+    {-2.00, -5.00, 0.00},
+    {14.00, -7.00, -20.00},
+    {8.00, -1.00, 6.00},
+    {-18.00, 2.00, 3.00},
+    {-13.00, 11.00, -4.00},
+    {-5.00, -10.00, 18.00},
+    {9.00, 5.00, 2.00},
+    {10.00, -12.00, -10.00},
+    {6.00, 8.00, -15.00},
+    {-1.00, -8.00, 10.00},
+    {-6.00, -11.00, 10.00},
+    {12.00, -15.00, -12.00},
+    {14.00, -3.00, -2.00},
+    {-15.00, 20.00, 14.00},
+    {18.00, 14.00, 5.00},
+    {10.00, -5.00, -3.00},
+    {-7.00, -9.00, 10.00},
+    {-17.00, 15.00, -14.00},
+    {3.00, -6.00, -8.00},
+    {5.00, -20.00, -10.00},
+    {0.00, 10.00, -18.00},
+    {1.00, -13.00, 7.00},
+    {16.00, -4.00, -6.00},
+    {4.00, -14.00, -2.00},
+    {3.00, 7.00, -1.00},
+    {-20.00, -19.00, -8.00},
+    {10.00, -17.00, 7.00},
+    {-14.00, -2.00, -13.00},
+    {-15.00, 9.00, 19.00},
+    {-11.00, -16.00, 0.00},
+    {-19.00, 4.00, 16.00},
+    {19.00, -20.00, 1.00},
+    {13.00, 15.00, -9.00},
+    {7.00, -7.00, 10.00},
+    {-16.00, -15.00, -5.00},
+    {2.00, 16.00, -3.00},
+    {11.00, 12.00, 10.00},
+    {-4.00, -3.00, 11.00},
+    {16.00, -18.00, 9.00},
+    {20.00, -9.00, 16.00},
+    {-19.00, -20.00, -10.00},
+    {-6.00, 0.00, -8.00},
+    {12.00, 8.00, -14.00},
+    {-8.00, 17.00, 18.00},
+    {15.00, 1.00, -18.00}
+  };
 
   while (!glfwWindowShouldClose(canvas.window)) {
     // Sun
     glm_mat4_identity(model);
+    glm_translate(model, (vec3) { 20, 0, 0 });
     glUseProgram(shader_lig);
     glUniformMatrix4fv(UNI(shader_lig, "MODEL"), 1, GL_FALSE, (const f32*) { model[0] });
     glUniformMatrix4fv(UNI(shader_lig, "PROJ"),  1, GL_FALSE, (const f32*) { proj[0] });
@@ -144,14 +193,14 @@ vec3 poss[30] = {
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, VBO_cube);
     glBindVertexArray(VAO_cube);
-    for (i8 i = 0; i < 30; i++) {
+    for (i8 i = 0; i < 77; i++) {
       glm_mat4_identity(model);
       glm_translate(model, poss[i]);
       glm_rotate(model, cos(sin(poss[i][2]) * tan(poss[i][0])), (vec3) { tan(poss[i][0]), sin(poss[i][2]), 0.5 });
       glUniformMatrix4fv(UNI(shader, "MODEL"), 1, GL_FALSE, (const f32*) { model[0] });
       glUniform3f(UNI(shader, "MAT.col"), .1, .1, .1);
       glDrawArrays(GL_TRIANGLES, 0, 36);
-      
+
       if (!toggle) {
         poss[i][1] -= 0.05;
         if (poss[i][1] < -10) poss[i][1] = 10;

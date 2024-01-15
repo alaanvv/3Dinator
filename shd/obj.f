@@ -27,5 +27,5 @@ void main() {
   vec3 ambient  = LIG.amb * vec3(texture(MAT.s_dif, tex)) * MAT.amb;
   vec3 diffuse  = LIG.dif * vec3(texture(MAT.s_dif, tex)) * MAT.dif * max(dot(normalize(nrm), light_dir), 0);
   vec3 specular = LIG.spc * vec3(texture(MAT.s_spc, tex)) * MAT.spc * pow(max(dot(view_dir, reflect_dir), 0), MAT.shi);
-  color = vec4(MAT.col * (ambient + diffuse + specular + vec3(texture(MAT.s_emt, tex))), 1);
+  color = vec4(MAT.col * (ambient + diffuse + specular), 1);
 }

@@ -76,31 +76,54 @@ i8 main() {
   glUseProgram(shader_lig);
   glUniform3f(UNI(shader_lig, "C_LIG"), c_lig[0], c_lig[1], c_lig[2]);
   glUseProgram(shader);
-  glUniform3f(UNI(shader, "MAT.amb"), 0.19225,  0.19225,  0.19225);
-  glUniform3f(UNI(shader, "MAT.dif"), 0.50754,  0.50754,  0.50754);
+  glUniform3f(UNI(shader, "MAT.amb"), 0.29225,  0.29225,  0.29225);
+  glUniform3f(UNI(shader, "MAT.dif"), 0.70754,  0.70754,  0.70754);
   glUniform3f(UNI(shader, "MAT.spc"), 0.508273, 0.508273, 0.508273);
   glUniform1f(UNI(shader, "MAT.shi"), 51.2);
   glUniform3f(UNI(shader, "LIG.amb"), c_lig[0], c_lig[1], c_lig[2]);
   glUniform3f(UNI(shader, "LIG.dif"), c_lig[0], c_lig[1], c_lig[2]);
   glUniform3f(UNI(shader, "LIG.spc"), c_lig[0], c_lig[1], c_lig[2]);
   glUniform3f(UNI(shader, "LIG.pos"), 0, 0, 0);
-  canvas_create_texture(GL_TEXTURE0, "img/box.ppm", shader, "MAT.s_dif", 0);
+
+  canvas_create_texture(GL_TEXTURE0, "img/pmk.ppm", shader, "MAT.s_dif", 0);
   canvas_create_texture(GL_TEXTURE1, "img/spc.ppm", shader, "MAT.s_spc", 1);
-  canvas_create_texture(GL_TEXTURE2, "img/emt.ppm", shader, "MAT.s_emt", 2);
 
   generate_proj_mat(cam, proj);
   generate_view_mat(cam, view);
 
-  inline f32 r_rot() { return (random() % (i16) TAU * 1e2) / 1e2; }
-  f32 t_me = r_rot();
-  f32 t_ve = r_rot();
-  f32 t_ea = r_rot();
-  f32 t_ma = r_rot();
-  f32 t_ju = r_rot();
-  f32 t_sa = r_rot();
-  f32 t_ur = r_rot();
-  f32 t_ne = r_rot();
-  
+vec3 poss[30] = {
+    {-6.00, 13.00, -9.00},
+    {5.00, 6.00, 10.00},
+    {-2.00, 11.00, 4.00},
+    {-9.00, 14.00, -6.00},
+    {1.00, 7.00, -5.00},
+    {0.00, 18.00, -3.00},
+    {-3.00, 5.00, 1.00},
+    {8.00, 14.00, 1.00},
+    {-2.00, 0.00, 6.00},
+    {0.00, 10.00, 6.00},
+    {-4.00, 1.00, -5.00},
+    {6.00, 2.00, 5.00},
+    {-9.00, 4.00, 8.00},
+    {-2.00, 12.00, -8.00},
+    {8.00, 11.00, 4.00},
+    {6.00, 15.00, -5.00},
+    {0.00, 1.00, -7.00},
+    {-10.00, 16.00, -3.00},
+    {-8.00, 7.00, 2.00},
+    {5.00, 7.00, 8.00},
+    {2.00, 13.00, 8.00},
+    {9.00, 6.00, -7.00},
+    {-1.00, 2.00, -8.00},
+    {4.00, 7.00, 4.00},
+    {-3.00, 1.00, 8.00},
+    {-2.00, 3.00, -3.00},
+    {5.00, 8.00, -9.00},
+    {9.00, 0.00, -1.00},
+    {-7.00, 7.00, -7.00},
+    {7.00, 2.00, 0.00}
+};
+
   while (!glfwWindowShouldClose(canvas.window)) {
     // Sun
     glm_mat4_identity(model);
@@ -119,38 +142,20 @@ i8 main() {
     glUniformMatrix4fv(UNI(shader, "VIEW"),  1, GL_FALSE, (const f32*) { view[0] });
     glUniform3f(UNI(shader, "P_CAM"), cam.pos[0], cam.pos[1], cam.pos[2]);
 
-    void draw_planet(f32 r, f32 g, f32 b, f32 translation, f32 distance, f32 size) {
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, VBO_cube);
+    glBindVertexArray(VAO_cube);
+    for (i8 i = 0; i < 30; i++) {
       glm_mat4_identity(model);
-      glm_rotate(model, translation, (vec3) { 0, 1, 0 });
-      glm_translate(model, (vec3) { distance });
-      glm_scale(model, (vec3) { size, size, size });
-
+      glm_translate(model, poss[i]);
+      glm_rotate(model, cos(sin(poss[i][2]) * tan(poss[i][0])), (vec3) { tan(poss[i][0]), sin(poss[i][2]), 0.5 });
       glUniformMatrix4fv(UNI(shader, "MODEL"), 1, GL_FALSE, (const f32*) { model[0] });
-      glUniform3f(UNI(shader, "MAT.col"), r, g, b);
-
-      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, VBO_cube);
-      glBindVertexArray(VAO_cube);
-      glDrawArrays(GL_TRIANGLES, 0, 36);   
-    }
-
-    draw_planet(0.58, 0.57, 0.60, t_me, 1, 0.05);
-    draw_planet(0.57, 0.29, 0.06, t_ve, 1.75, 0.1);
-    draw_planet(0.32, 0.39, 0.25, t_ea, 2.75, 0.09);
-    draw_planet(0.93, 0.50, 0.40, t_ma, 3.75, 0.07);
-    draw_planet(0.81, 0.71, 0.60, t_ju, 7, 0.45);
-    draw_planet(0.68, 0.58, 0.43, t_sa, 9, 0.3);
-    draw_planet(0.28, 0.60, 0.67, t_ur, 10.75, 0.253);
-    draw_planet(0.27, 0.44, 1.00, t_ne, 16.5, 0.25);
-
-    if (!toggle) { 
-      t_me += TAU / 88;
-      t_ve -= TAU / 225;
-      t_ea += TAU / 365;
-      t_ma += TAU / 687;
-      t_ju += TAU / 4333;
-      t_sa += TAU / 10747;
-      t_ur -= TAU / 30589;
-      t_ne += TAU / 60190;
+      glUniform3f(UNI(shader, "MAT.col"), .1, .1, .1);
+      glDrawArrays(GL_TRIANGLES, 0, 36);
+      
+      if (!toggle) {
+        poss[i][1] -= 0.05;
+        if (poss[i][1] < -10) poss[i][1] = 10;
+      }
     }
 
     glfwSwapBuffers(canvas.window); 

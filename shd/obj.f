@@ -1,32 +1,32 @@
 # version 330 core
 
 struct Material {
-  vec3 col, amb, dif, spc;
-  float shi;
-  sampler2D s_dif, s_spc, s_emt;
+  vec3 COL, AMB, DIF, SPC;
+  float SHI;
+  sampler2D S_DIF, S_SPC, S_EMT;
 };
 
 struct Light {
-  vec3 amb, dif, spc, pos;
+  vec3 COL, POS;
 };
 
 struct DirectionalLight {
-  vec3 amb, dif, spc, dir;
+  vec3 COL, DIR;
 };
 
 struct PointLight {
-  vec3 amb, dif, spc, pos;
-  float k, l, q;
+  vec3 COL, POS;
+  float CON, LIN, QUA;
 };
 
 struct SpotLight {
-  vec3 amb, dif, spc, pos, dir;
-  float k, l, q, cutoff, outer_cutoff;
+  vec3 COL, POS, DIR;
+  float CON, LIN, QUA, INN, OUT;
 };
 
 uniform Material  MAT;
 uniform SpotLight LIG;
-uniform vec3 P_CAM;
+uniform vec3 CAM;
 
 in  vec3 nrm;
 in  vec3 pos;
@@ -34,19 +34,19 @@ in  vec2 tex;
 out vec4 color;
 
 void main() {
-  vec3 light_dir =   normalize(LIG.pos - pos);
-  vec3 view_dir =    normalize(P_CAM - pos);
+  vec3 light_dir =   normalize(LIG.POS - pos);
+  vec3 view_dir =    normalize(CAM - pos);
   vec3 reflect_dir = normalize(reflect(-light_dir, nrm));
 
-  float theta = dot(light_dir, normalize(-LIG.dir));
-  float epsilon = LIG.cutoff - LIG.outer_cutoff;
-  float intensity = clamp((theta - LIG.outer_cutoff) / epsilon, 0, 1);
+  float theta = dot(light_dir, normalize(-LIG.DIR));
+  float epsilon = LIG.INN - LIG.OUT;
+  float intensity = clamp((theta - LIG.OUT) / epsilon, 0, 1);
 
-  float distance = length(LIG.pos - pos);
-  float attenuation = 1 / (LIG.k + LIG.l * distance + LIG.q * distance * distance);
+  float distance = length(LIG.POS - pos);
+  float attenuation = 1 / (LIG.CON + LIG.LIN * distance + LIG.QUA * distance * distance);
 
-  vec3 ambient  = attenuation * LIG.amb * vec3(texture(MAT.s_dif, tex)) * MAT.amb;
-  vec3 diffuse  = intensity * attenuation * LIG.dif * vec3(texture(MAT.s_dif, tex)) * MAT.dif * max(dot(normalize(nrm), light_dir), 0);
-  vec3 specular = intensity * attenuation * LIG.spc * vec3(texture(MAT.s_spc, tex)) * MAT.spc * pow(max(dot(view_dir, reflect_dir), 0), MAT.shi);
-  color = vec4(MAT.col * (ambient + diffuse + specular), 1);
+  vec3 ambient  = attenuation * LIG.COL * vec3(texture(MAT.S_DIF, tex)) * MAT.AMB;
+  vec3 diffuse  = intensity * attenuation * LIG.COL * vec3(texture(MAT.S_DIF, tex)) * MAT.DIF * max(dot(normalize(nrm), light_dir), 0);
+  vec3 specular = intensity * attenuation * LIG.COL * vec3(texture(MAT.S_SPC, tex)) * MAT.SPC * pow(max(dot(view_dir, reflect_dir), 0), MAT.SHI);
+  color = vec4(MAT.COL * (ambient + diffuse + specular), 1);
 }

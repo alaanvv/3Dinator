@@ -1,4 +1,3 @@
-// TODO 1. Refactor; 2. Make work; 3. Add multiple lights; 4. Modularize more (uniform, texture...)
 #include "canvas.h"
 
 #define MIN(x, y) (x < y ? x : y)
@@ -42,7 +41,7 @@ Camera cam = { WIDTH, HEIGHT, FOV, NEAR, FAR, { 0, 0, 15 }, { 0, 0, -1 }, { 1, 0
 
 mat4 model, view, proj;
 f32 last_mouse_x, last_mouse_y;
-u32 shader;
+u32 shader_obj, shader_lig;
 
 u8 toggle;
 
@@ -58,44 +57,119 @@ void main() {
   canvas_vertex_attrib_pointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(f32), (void*) (3 * sizeof(f32)));
   canvas_vertex_attrib_pointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(f32), (void*) (6 * sizeof(f32)));
 
-  shader = shader_create_program("shd/obj.v", "shd/obj.f");
-  canvas_create_texture(GL_TEXTURE0, "img/flr.ppm", shader, "MAT.S_DIF", 0);
-  canvas_create_texture(GL_TEXTURE1, "img/pmk.ppm", shader, "MAT.S_DIF", 1);
-  canvas_create_texture(GL_TEXTURE2, "img/spc.ppm", shader, "MAT.S_SPC", 2);
+  shader_lig = shader_create_program("shd/obj.v", "shd/lig.f");
+  shader_obj = shader_create_program("shd/obj.v", "shd/obj.f");
+  canvas_create_texture(GL_TEXTURE0, "img/flr.ppm", shader_obj, "MAT.S_DIF", 0);
+  canvas_create_texture(GL_TEXTURE1, "img/pmk.ppm", shader_obj, "MAT.S_DIF", 1);
+  canvas_create_texture(GL_TEXTURE2, "img/spc.ppm", shader_obj, "MAT.S_SPC", 2);
 
-  canvas_uni3f(shader, "MAT.COL", 1, 1, 1);
-  canvas_uni3f(shader, "MAT.AMB", 0.03, 0.03, 0.03);
-  canvas_uni3f(shader, "MAT.DIF", 1.00, 1.00, 1.00);
-  canvas_uni3f(shader, "MAT.SPC", 0.50, 0.50, 0.50);
-  canvas_uni1f(shader, "MAT.SHI", 51);
-  canvas_uni3f(shader, "LIG.COL", 1, 1, 1);
-  canvas_uni3f(shader, "LIG.POS", 0, 0, 0);
-  canvas_uni1f(shader, "LIG.CON", 1);
-  canvas_uni1f(shader, "LIG.LIN", 0.007);
-  canvas_uni1f(shader, "LIG.QUA", 0.0002);
-  canvas_uni1f(shader, "LIG.INN", cos(0.21));
-  canvas_uni1f(shader, "LIG.OUT", cos(0.25));
+  canvas_uni3f(shader_obj, "MAT.COL", 1, 1, 1);
+  canvas_uni3f(shader_obj, "MAT.AMB", 0.10, 0.10, 0.10);
+  canvas_uni3f(shader_obj, "MAT.DIF", 1.00, 1.00, 1.00);
+  canvas_uni3f(shader_obj, "MAT.SPC", 0.50, 0.50, 0.50);
+  canvas_uni1f(shader_obj, "MAT.SHI", 51);
+  canvas_uni3f(shader_obj, "SPT_LIGS[0].COL", 1, 1, 1);
+  canvas_uni3f(shader_obj, "SPT_LIGS[0].POS", 0, 0, 0);
+  canvas_uni1f(shader_obj, "SPT_LIGS[0].CON", 1);
+  canvas_uni1f(shader_obj, "SPT_LIGS[0].LIN", 0.07);
+  canvas_uni1f(shader_obj, "SPT_LIGS[0].QUA", 0.4);
+  canvas_uni1f(shader_obj, "SPT_LIGS[0].INN", cos(0.21));
+  canvas_uni1f(shader_obj, "SPT_LIGS[0].OUT", cos(0.25));
+  canvas_uni1i(shader_obj, "MAT.USE_S_DIF", 1);
+  canvas_uni1i(shader_obj, "MAT.USE_S_SPC", 1);
 
   generate_proj_mat(cam, proj);
   generate_view_mat(cam, view);
 
   vec3 poss[80] = { {-1, 15, 3}, {0, -3, -14}, {-6, 13, -9}, {5, 6, 10}, {-2, 11, 4}, {-9, 14, -6}, {1, 7, -5}, {0, 18, -3}, {-3, 5, 1}, {8, 14, 1}, {-2, 0, 6}, {0, 10, 6}, {-4, 1, -5}, {6, 2, 5}, {-9, 4, 8}, {-2, 12, -8}, {8, 11, 4}, {6, 15, -5}, {0, 1, -7}, {-10, 16, -3}, {-8, 7, 2}, {5, 7, 8}, {2, 13, 8}, {9, 6, -7}, {-1, 2, -8}, {4, 7, 4}, {-3, 1, 8}, {-2, 3, -3}, {5, 8, -9}, {9, 0, -1}, {-7, 7, -7}, {7, 2, 0}, {15, 3, -10}, {-12, -18, 11}, {17, -16, -18}, {-2, -5, 0}, {14, -7, -20}, {8, -1, 6}, {-18, 2, 3}, {-13, 11, -4}, {-5, -10, 18}, {9, 5, 2}, {10, -12, -10}, {6, 8, -15}, {-1, -8, 10}, {-6, -11, 10}, {12, -15, -12}, {14, -3, -2}, {-15, 20, 14}, {18, 14, 5}, {10, -5, -3}, {-7, -9, 10}, {-17, 15, -14}, {3, -6, -8}, {5, -20, -10}, {0, 10, -18}, {1, -13, 7}, {16, -4, -6}, {4, -14, -2}, {3, 7, -1}, {-20, -19, -8}, {10, -17, 7}, {-14, -2, -13}, {-15, 9, 19}, {-11, -16, 0}, {-19, 4, 16}, {19, -20, 1}, {13, 15, -9}, {7, -7, 10}, {-16, -15, -5}, {2, 16, -3}, {11, 12, 10}, {-4, -3, 11}, {16, -18, 9}, {20, -9, 16}, {-19, -20, -10}, {-6, 0, -8}, {12, 8, -14}, {-8, 17, 18}, {15, 1, -18} };
+  vec3 pnt_ligs[] = { { 3, -10 }, { 3, -10 }, { 3, -10 } };
+
+  glm_mat4_identity(model);
+  glm_rotate(model, TAU * 0.33, (vec3) { 0, 1, 0 });
+  glm_mat4_mulv3(model, pnt_ligs[1], 1, pnt_ligs[1]);
+
+  glm_mat4_identity(model);
+  glm_rotate(model, TAU * 0.66, (vec3) { 0, 1, 0 });
+  glm_mat4_mulv3(model, pnt_ligs[2], 1, pnt_ligs[2]);
 
   while (!glfwWindowShouldClose(canvas.window)) {
-    canvas_unim4(shader, "PROJ", proj[0]);
-    canvas_unim4(shader, "VIEW", view[0]);
-    canvas_uni3f(shader, "CAM", cam.pos[0], cam.pos[1], cam.pos[2]);
-    canvas_uni3f(shader, "LIG.POS", cam.pos[0], cam.pos[1], cam.pos[2]);
-    canvas_uni3f(shader, "LIG.DIR", cam.dir[0], cam.dir[1], cam.dir[2]);
-
-    canvas_use_texture(shader, "MAT.S_DIF", 0);
+    // Draw lights
+    glUseProgram(shader_lig);
+    canvas_unim4(shader_lig, "PROJ", proj[0]);
+    canvas_unim4(shader_lig, "VIEW", view[0]);
+    
     glm_mat4_identity(model);
-    glm_translate(model, (vec3) { 0, -20, 0 });
-    glm_scale(model, (vec3) { 20, 20, 20 });
-    canvas_unim4(shader, "MODEL", model[0]);
+    glm_translate(model, pnt_ligs[0]);
+    glm_scale(model, (vec3) { 0.3, 0.3, 0.3 });
+    canvas_uni3f(shader_lig, "COL", 1, 0, 0);
+    canvas_unim4(shader_lig, "MODEL", model[0]);
+    glDrawArrays(GL_TRIANGLES, 0, 36);
+    
+    glm_mat4_identity(model);
+    glm_translate(model, pnt_ligs[1]);
+    glm_scale(model, (vec3) { 0.3, 0.3, 0.3 });
+    canvas_uni3f(shader_lig, "COL", 0, 1, 0);
+    canvas_unim4(shader_lig, "MODEL", model[0]);
+    glDrawArrays(GL_TRIANGLES, 0, 36);
+    
+    glm_mat4_identity(model);
+    glm_translate(model, pnt_ligs[2]);
+    glm_scale(model, (vec3) { 0.3, 0.3, 0.3 });
+    canvas_uni3f(shader_lig, "COL", 0, 0, 1);
+    canvas_unim4(shader_lig, "MODEL", model[0]);
     glDrawArrays(GL_TRIANGLES, 0, 36);
 
-    canvas_use_texture(shader, "MAT.S_DIF", 1);
+    if (!toggle) {
+      glm_mat4_identity(model);
+      glm_rotate(model, PI / 100, (vec3) { 0, 1, 0 });
+      glm_mat4_mulv3(model, pnt_ligs[0], 1, pnt_ligs[0]);
+      glm_mat4_mulv3(model, pnt_ligs[1], 1, pnt_ligs[1]);
+      glm_mat4_mulv3(model, pnt_ligs[2], 1, pnt_ligs[2]);
+    }
+
+    // Draw objects
+    glUseProgram(shader_obj);
+    canvas_unim4(shader_obj, "PROJ", proj[0]);
+    canvas_unim4(shader_obj, "VIEW", view[0]);
+    canvas_uni3f(shader_obj, "CAM", cam.pos[0], cam.pos[1], cam.pos[2]);
+    
+    canvas_uni3f(shader_obj, "DIR_LIGS[0].COL", 0.1, 0.1, 0.1);
+    canvas_uni3f(shader_obj, "DIR_LIGS[0].DIR", -1, 0, 0);
+    
+    canvas_uni3f(shader_obj, "SPT_LIGS[0].POS", cam.pos[0], cam.pos[1], cam.pos[2]);
+    canvas_uni3f(shader_obj, "SPT_LIGS[0].DIR", cam.dir[0], cam.dir[1], cam.dir[2]);
+    
+    canvas_uni3f(shader_obj, "PNT_LIGS[0].COL", 1, 0, 0);
+    canvas_uni3f(shader_obj, "PNT_LIGS[0].POS", pnt_ligs[0][0], pnt_ligs[0][1], pnt_ligs[0][2]);
+    canvas_uni1f(shader_obj, "PNT_LIGS[0].CON", 1);
+    canvas_uni1f(shader_obj, "PNT_LIGS[0].LIN", 0.0035);
+    canvas_uni1f(shader_obj, "PNT_LIGS[0].QUA", 0.04);
+
+    canvas_uni3f(shader_obj, "PNT_LIGS[1].COL", 0, 1, 0);
+    canvas_uni3f(shader_obj, "PNT_LIGS[1].POS", pnt_ligs[1][0], pnt_ligs[1][1], pnt_ligs[1][2]);
+    canvas_uni1f(shader_obj, "PNT_LIGS[1].CON", 1);
+    canvas_uni1f(shader_obj, "PNT_LIGS[1].LIN", 0.0035);
+    canvas_uni1f(shader_obj, "PNT_LIGS[1].QUA", 0.04);
+ 
+    canvas_uni3f(shader_obj, "PNT_LIGS[2].COL", 0, 0, 1);
+    canvas_uni3f(shader_obj, "PNT_LIGS[2].POS", pnt_ligs[2][0], pnt_ligs[2][1], pnt_ligs[2][2]);
+    canvas_uni1f(shader_obj, "PNT_LIGS[2].CON", 1);
+    canvas_uni1f(shader_obj, "PNT_LIGS[2].LIN", 0.0035);
+    canvas_uni1f(shader_obj, "PNT_LIGS[2].QUA", 0.04);
+
+    // Floor
+    canvas_use_texture(shader_obj, "MAT.S_DIF", 0);
+    canvas_uni3f(shader_obj, "MAT.AMB", 1.00, 1.00, 1.00);
+
+    glm_mat4_identity(model);
+    glm_translate(model, (vec3) { 0, -16, 0 });
+    glm_scale(model, (vec3) { 10, 10, 10 });
+    canvas_unim4(shader_obj, "MODEL", model[0]);
+    glDrawArrays(GL_TRIANGLES, 0, 36);
+
+    // Pumpkins
+    canvas_use_texture(shader_obj, "MAT.S_DIF", 1);
+    canvas_uni3f(shader_obj, "MAT.AMB", 0.10, 0.10, 0.10);
     for (i8 i = 0; i < 80; i++) {
       glm_mat4_identity(model);
       glm_translate(model, poss[i]);
@@ -103,7 +177,7 @@ void main() {
       if (!i) glm_scale(model, (vec3) { 2, 2, 2 });
       if (!toggle) poss[i][1] = CIRCULAR_CLAMP(-10, poss[i][1] - 0.05, 10);
 
-      canvas_unim4(shader, "MODEL", model[0]);
+      canvas_unim4(shader_obj, "MODEL", model[0]);
       glDrawArrays(GL_TRIANGLES, 0, 36);
     }
 

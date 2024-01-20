@@ -91,7 +91,7 @@ void canvas_use_texture(u32 shader, char uniform_name[], i32 texture) {
   glUniform1i(glGetUniformLocation(shader, uniform_name), texture);
 }
 
-u32 canvas_create_texture(GLenum unit, char path[], u32 shader, char uniform_name[], i32 uniform_value) {
+u32 canvas_create_texture(GLenum unit, char path[]) {
   // Read image
   u16 width, height;
   FILE* img = fopen(path, "r");
@@ -117,7 +117,6 @@ u32 canvas_create_texture(GLenum unit, char path[], u32 shader, char uniform_nam
 
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_FLOAT, buffer);
   glGenerateMipmap(GL_TEXTURE_2D);
-  canvas_use_texture(shader, uniform_name, uniform_value);
 
   free(buffer);
   return texture;

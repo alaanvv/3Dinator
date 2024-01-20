@@ -1,11 +1,11 @@
 #version 330 core
 
-#define DIR_LIG_ENABLE 1
+#define DIR_LIG_ENABLE 0
 #define PNT_LIG_ENABLE 1
 #define SPT_LIG_ENABLE 1
 
 #define DIR_LIG_AMOUNT 1
-#define PNT_LIG_AMOUNT 3
+#define PNT_LIG_AMOUNT 1
 #define SPT_LIG_AMOUNT 1
 
 // --- Struct
@@ -34,7 +34,8 @@ struct SptLig {
 // --- Setup
 
 uniform vec3 CAM;
-uniform Material  MAT;
+uniform vec2 TEX_SCALE;
+uniform Material MAT;
 uniform DirLig DIR_LIGS[DIR_LIG_AMOUNT];
 uniform PntLig PNT_LIGS[PNT_LIG_AMOUNT];
 uniform SptLig SPT_LIGS[SPT_LIG_AMOUNT];
@@ -46,44 +47,44 @@ out vec4 color;
 
 // --- Function
 
-vec3 CalcDirLig(DirLig lig, vec3 normal, vec3 cam, float amb_str, float dif_str, float spc_str) {
+vec3 CalcDirLig(DirLig lig, vec3 normal, vec3 cam) {
   vec3 view_dir = normalize(cam - pos);
   vec3 light_dir = normalize(-lig.DIR);
 
-  vec3 ambient = lig.COL * amb_str * MAT.AMB;
+  vec3 ambient = lig.COL * MAT.AMB;
   if (MAT.USE_S_DIF == 1) ambient *= vec3(texture(MAT.S_DIF, tex));
   if (MAT.USE_S_EMT == 1) ambient += vec3(texture(MAT.S_EMT, tex));
 
-  vec3 diffuse = lig.COL * dif_str * MAT.DIF * max(dot(normal, light_dir), 0); 
+  vec3 diffuse = lig.COL * MAT.DIF * max(dot(normal, light_dir), 0); 
   if (MAT.USE_S_DIF == 1) diffuse *= vec3(texture(MAT.S_DIF, tex));
 
-  vec3 specular = lig.COL * spc_str * MAT.SPC * pow(max(dot(view_dir, reflect(-light_dir, normal)), 0), MAT.SHI);
+  vec3 specular = lig.COL * MAT.SPC * pow(max(dot(view_dir, reflect(-light_dir, normal)), 0), MAT.SHI);
   if (MAT.USE_S_SPC == 1) specular *= vec3(texture(MAT.S_SPC, tex));
 
   return (ambient + diffuse + specular);
 }
 
-vec3 CalcPntLig(PntLig lig, vec3 normal, vec3 cam, vec3 frag_pos, float amb_str, float dif_str, float spc_str) {
+vec3 CalcPntLig(PntLig lig, vec3 normal, vec3 cam, vec3 frag_pos) {
   vec3 view_dir = normalize(cam - pos);
   vec3 light_dir = normalize(lig.POS - frag_pos);
 
   float distance = length(lig.POS - frag_pos);
   float attenuation = 1 / (lig.CON + lig.LIN * distance + lig.QUA * distance * distance);
 
-  vec3 ambient = attenuation * lig.COL * amb_str * MAT.AMB;
+  vec3 ambient = attenuation * lig.COL * MAT.AMB;
   if (MAT.USE_S_DIF == 1) ambient *= vec3(texture(MAT.S_DIF, tex));
   if (MAT.USE_S_EMT == 1) ambient += vec3(texture(MAT.S_EMT, tex));
 
-  vec3 diffuse = attenuation * lig.COL * dif_str * MAT.DIF * max(dot(normalize(normal), light_dir), 0); 
+  vec3 diffuse = attenuation * lig.COL * MAT.DIF * max(dot(normalize(normal), light_dir), 0); 
   if (MAT.USE_S_DIF == 1) diffuse *= vec3(texture(MAT.S_DIF, tex));
 
-  vec3 specular = attenuation * lig.COL * spc_str * MAT.SPC * pow(max(dot(view_dir, reflect(-light_dir, normal)), 0), MAT.SHI);
+  vec3 specular = attenuation * lig.COL * MAT.SPC * pow(max(dot(view_dir, reflect(-light_dir, normal)), 0), MAT.SHI);
   if (MAT.USE_S_SPC == 1) specular *= vec3(texture(MAT.S_SPC, tex));
 
   return (ambient + diffuse + specular);
 }
 
-vec3 CalcSptLig(SptLig lig, vec3 normal, vec3 cam, vec3 frag_pos, float amb_str, float dif_str, float spc_str) {
+vec3 CalcSptLig(SptLig lig, vec3 normal, vec3 cam, vec3 frag_pos) {
   vec3 view_dir = normalize(cam - pos);
   vec3 light_dir = normalize(lig.POS - frag_pos);
 
@@ -94,14 +95,14 @@ vec3 CalcSptLig(SptLig lig, vec3 normal, vec3 cam, vec3 frag_pos, float amb_str,
   float distance = length(lig.POS - frag_pos);
   float attenuation = 1 / (lig.CON + lig.LIN * distance + lig.QUA * distance * distance);
 
-  vec3 ambient = attenuation * lig.COL * amb_str * MAT.AMB;
+  vec3 ambient = attenuation * lig.COL * MAT.AMB;
   if (MAT.USE_S_DIF == 1) ambient *= vec3(texture(MAT.S_DIF, tex));
   if (MAT.USE_S_EMT == 1) ambient += vec3(texture(MAT.S_EMT, tex));
 
-  vec3 diffuse = intensity * attenuation * lig.COL * dif_str * MAT.DIF * max(dot(normalize(normal), light_dir), 0); 
+  vec3 diffuse = intensity * attenuation * lig.COL * MAT.DIF * max(dot(normalize(normal), light_dir), 0); 
   if (MAT.USE_S_DIF == 1) diffuse *= vec3(texture(MAT.S_DIF, tex));
 
-  vec3 specular = intensity * attenuation * lig.COL * spc_str * MAT.SPC * pow(max(dot(view_dir, reflect(-light_dir, normal)), 0), MAT.SHI);
+  vec3 specular = intensity * attenuation * lig.COL * MAT.SPC * pow(max(dot(view_dir, reflect(-light_dir, normal)), 0), MAT.SHI);
   if (MAT.USE_S_SPC == 1) specular *= vec3(texture(MAT.S_SPC, tex));
 
   return (ambient + diffuse + specular);
@@ -114,15 +115,15 @@ void main() {
 
   if (DIR_LIG_ENABLE == 1)
     for (int i = 0; i < DIR_LIG_AMOUNT; i++)
-      _color += CalcDirLig(DIR_LIGS[i], nrm, CAM, 0.5, 0.5, 0.3);  
+      _color += CalcDirLig(DIR_LIGS[i], nrm, CAM);
   
   if (PNT_LIG_ENABLE == 1)
     for (int i = 0; i < PNT_LIG_AMOUNT; i++)
-      _color += CalcPntLig(PNT_LIGS[i], nrm, CAM, pos, 0.5, 0.5, 0.3);  
+      _color += CalcPntLig(PNT_LIGS[i], nrm, CAM, pos);
   
   if (SPT_LIG_ENABLE == 1)
     for (int i = 0; i < SPT_LIG_AMOUNT; i++)
-      _color += CalcSptLig(SPT_LIGS[i], nrm, CAM, pos, 0.5, 0.5, 0.3);  
+      _color += CalcSptLig(SPT_LIGS[i], nrm, CAM, pos);
   
   color = vec4(_color, 1);
 }

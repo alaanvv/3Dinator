@@ -1,4 +1,5 @@
 #include "canvas.h"
+#include "model.h"
 
 #define MIN(x, y) (x < y ? x : y)
 #define MAX(x, y) (x > y ? x : y)
@@ -35,10 +36,11 @@ void handle_inputs(GLFWwindow*);
 
 // --- Setup
 
-#include "mesh.h" 
+#include "meshes.h" 
 
 Canvas canvas = { NULL, WIDTH, HEIGHT };
 Camera cam = { WIDTH, HEIGHT, FOV, NEAR, FAR, { 0, 5, 5 }, { 0, 0, -1 }, { 1, 0, 0 } };
+Model backpack = { {}, 0, {}, 0, "mod/backpack/", 1 };
 
 mat4 model, view, proj;
 f32 last_mouse_x, last_mouse_y;
@@ -52,82 +54,12 @@ vec3 dif = { 0.5, 0.5, 0.5 };
 u8 toggle;
 
 
-// --- New stuff
-/*
-typedef struct Vertex {
-  vec3 Pos;
-  vec3 Nrm;
-  vec2 Tex;
-};
-
-typedef struct Texture {
-  u8 id;
-  char type[];
-};
-
-typedef struct {
-  Vertex vertices[];
-  Texture textures[];
-  u8 vertices[], VAO, VBO, EBO;
-} Mesh;
-
-mesh_draw(Shader &shader);
-
-void mesh_setup() {
-  // TODO Use my own
-  glGenVertexArrays(1, &VAO);
-  glGenBuffers(1, &VBO);
-  glGenBuffers(1, &EBO);
-
-  glBindVertexArray(VAO);
-  glBindBuffer(GL_ARRAY_BUFFER, VBO);
-
-  glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), &vertices[0], GL_STATIC_DRAW);  
-
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(u8), &indices[0], GL_STATIC_DRAW);
-
-  canvas_vertex_attrib_pointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*) 0);
-  canvas_vertex_attrib_pointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*) offsetof(Vertex, Nrm));
-  canvas_vertex_attrib_pointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*) offsetof(Vertex, Tex));
-}
-
-Vertex vertex = { (vec3) { 0.2, 0.4, 0.6 }, (vec3) {0, 1, 0}, (vec2) { 1, 0 } };
-glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), vertices[0], GL_STATIC_DRAW);    
-glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*) offsetof(Vertex, Normal));  
-
-uniform sampler2D texture_diffuse1;
-uniform sampler2D texture_diffuse2;
-uniform sampler2D texture_diffuse3;
-uniform sampler2D texture_specular1;
-uniform sampler2D texture_specular2;
-
-void mesh_draw(u8 shader) {
-  u8 diffuseNr = 1;
-  u8 specularNr = 1;
-  for (u8 i = 0; i < textures.size(); i++) {
-    glActiveTexture(GL_TEXTURE0 + i);
-    char number[];
-    cahr name[] = textures[i].type;
-    if (name == "texture_diffuse")
-      number = std::to_string(diffuseNr++);
-    else if(name == "texture_specular")
-      number = std::to_string(specularNr++);
-
-    shader.setInt(("material." + name + number).c_str(), i);
-    glBindTexture(GL_TEXTURE_2D, textures[i].id);
-  }
-  glActiveTexture(GL_TEXTURE0);
-
-  glBindVertexArray(VAO);
-  glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
-} 
-*/
-
 // --- Main
 
 void main() {
-  canvas_init(&canvas, "Light", (CanvasInitConfig) { GL_MIRRORED_REPEAT, GL_MIRRORED_REPEAT, GL_LINEAR, GL_LINEAR, (RGBA) { 0, 0, 0.07, 1 }, 1, 1, 1, key_callback, mouse_callback });
+  canvas_init(&canvas, "Light", (CanvasInitConfig) { GL_MIRRORED_REPEAT, GL_MIRRORED_REPEAT, GL_LINEAR, GL_LINEAR, (RGBA) { 0, 0, 0.07, 1 }, 0, 1, 1, key_callback, mouse_callback });
+
+  model_load_model(&backpack, "backpack.obj");
 
   u32 VAO = canvas_create_VAO();
   u32 VBO = canvas_create_VBO(sizeof(cube), cube, GL_STATIC_DRAW);
@@ -163,6 +95,7 @@ void main() {
   generate_view_mat(cam, view);
 
   while (!glfwWindowShouldClose(canvas.window)) {
+    model_draw(&backpack, shader_obj);
     // Draw lights
     glUseProgram(shader_lig);
     canvas_unim4(shader_lig, "PROJ", proj[0]);

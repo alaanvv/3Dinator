@@ -5,9 +5,9 @@
 
 Mesh* createMesh(Vertex* vertices, unsigned int* indices, Texture* textures, int numVertices, int numIndices, int numTextures) {
     Mesh* mesh = (Mesh*)malloc(sizeof(Mesh));
-    mesh->vertices = (Vertex*)malloc(numVertices * sizeof(Vertex));
-    mesh->indices = (unsigned int*)malloc(numIndices * sizeof(unsigned int));
-    mesh->textures = (Texture*)malloc(numTextures * sizeof(Texture));
+    mesh->vertices[mesh->num_vertices] = (Vertex*)malloc(numVertices * sizeof(Vertex));
+    mesh->indices[mesh->num_indices] = (unsigned int*)malloc(numIndices * sizeof(unsigned int));
+    mesh->textures[mesh->num_textures] = (Texture*)malloc(numTextures * sizeof(Texture));
     memcpy(mesh->vertices, vertices, numVertices * sizeof(Vertex));
     memcpy(mesh->indices, indices, numIndices * sizeof(unsigned int));
     memcpy(mesh->textures, textures, numTextures * sizeof(Texture));
@@ -49,7 +49,7 @@ void drawMesh(Mesh* mesh, u8 shader) {
     for (unsigned int i = 0; i < mesh->num_textures; i++) {
         glActiveTexture(GL_TEXTURE0 + i);
         char number[10];
-        char* name = mesh->textures[i].type;
+        char* name = mesh->textures[i]->type;
         if (strcmp(name, "texture_diffuse") == 0)
             sprintf(number, "%d", diffuseNr++);
         else if (strcmp(name, "texture_specular") == 0)
@@ -59,8 +59,7 @@ void drawMesh(Mesh* mesh, u8 shader) {
         else if (strcmp(name, "texture_height") == 0)
             sprintf(number, "%d", heightNr++);
         glUniform1i(glGetUniformLocation(shader, strcat(name, number)), i);
-        glBindTexture(GL_TEXTURE_2D, mesh->textures[i].id);
-  printf("A\n");
+        glBindTexture(GL_TEXTURE_2D, mesh->textures[i]->id);
     }
     glBindVertexArray(mesh->VAO);
     glDrawElements(GL_TRIANGLES, sizeof(mesh->indices) / sizeof(unsigned int), GL_UNSIGNED_INT, 0);

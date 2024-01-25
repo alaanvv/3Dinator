@@ -59,7 +59,6 @@ u8 toggle;
 void main() {
   canvas_init(&canvas, "Light", (CanvasInitConfig) { GL_MIRRORED_REPEAT, GL_MIRRORED_REPEAT, GL_LINEAR, GL_LINEAR, (RGBA) { 0, 0, 0.07, 1 }, 0, 1, 1, key_callback, mouse_callback });
 
-  model_load_model(&backpack, "backpack.obj");
 
   u32 VAO = canvas_create_VAO();
   u32 VBO = canvas_create_VBO(sizeof(cube), cube, GL_STATIC_DRAW);
@@ -95,7 +94,6 @@ void main() {
   generate_view_mat(cam, view);
 
   while (!glfwWindowShouldClose(canvas.window)) {
-    model_draw(&backpack, shader_obj);
     // Draw lights
     glUseProgram(shader_lig);
     canvas_unim4(shader_lig, "PROJ", proj[0]);

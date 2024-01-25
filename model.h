@@ -110,7 +110,7 @@ Texture* model_load_material_textures(Model* model, struct aiMaterial* mat, enum
 
 void model_process_mesh(Model* model, Mesh* new_mesh, struct aiMesh* mesh, const struct aiScene* scene) {
   new_mesh->num_vertices = mesh->mNumVertices;
-  new_mesh->vertices = (Vertex*) malloc(new_mesh->num_vertices * sizeof(Vertex));
+  new_mesh->vertices[new_mesh->num_vertices] = (Vertex*) malloc(new_mesh->num_vertices * sizeof(Vertex));
 
   for (u32 i; i < mesh->mNumVertices; i++) {
     Vertex vertex;
@@ -140,35 +140,35 @@ void model_process_mesh(Model* model, Mesh* new_mesh, struct aiMesh* mesh, const
     }
     else glm_vec2_copy((vec2) { 0, 0 }, vertex.TexCoords);
 
-    new_mesh->vertices[i] = vertex;
+    new_mesh->vertices[i] = &vertex;
   }
 
   new_mesh->num_faces = mesh->mNumFaces;
-  new_mesh->faces = (Face*) malloc(new_mesh->num_faces * sizeof(Face));
+  new_mesh->faces[new_mesh->num_faces] = (Face*) malloc(new_mesh->num_faces * sizeof(Face));
 
   for (u16 i; i < mesh->mNumFaces; i++) {
     struct aiFace face = mesh->mFaces[i];
-    new_mesh->faces[i].num_indices = face.mNumIndices;
-    new_mesh->faces[i].indices = (u32*) malloc(face.mNumIndices * sizeof(unsigned int));
-    for (u16 j; j < face.mNumIndices; j++) new_mesh->faces[i].indices[j] = face.mIndices[j];
+    new_mesh->faces[i]->num_indices = face.mNumIndices;
+    new_mesh->faces[i]->indices = (u32*) malloc(face.mNumIndices * sizeof(unsigned int));
+    for (u16 j; j < face.mNumIndices; j++) new_mesh->faces[i]->indices[j] = face.mIndices[j];
   }
 
   struct aiMaterial* mat = scene->mMaterials[mesh->mMaterialIndex];
   new_mesh->num_textures = 0;
-  new_mesh->textures = model_load_material_textures(model, mat, aiTextureType_DIFFUSE, "texture_diffuse");
+  new_mesh->textures[new_mesh->num_textures] = model_load_material_textures(model, mat, aiTextureType_DIFFUSE, "texture_diffuse");
   new_mesh->num_textures += aiGetMaterialTextureCount(mat, aiTextureType_DIFFUSE);
 
   Texture* specularMaps = model_load_material_textures(model, mat, aiTextureType_SPECULAR, "texture_specular");
-  new_mesh->textures = (Texture*) realloc(new_mesh->textures, (new_mesh->num_textures + aiGetMaterialTextureCount(mat, aiTextureType_SPECULAR)) * sizeof(Texture));
-  for (u8 i; i <aiGetMaterialTextureCount(mat, aiTextureType_SPECULAR); i++) new_mesh->textures[new_mesh->num_textures++] = specularMaps[i];
+  new_mesh->textures[new_mesh->num_textures] = (Texture*) realloc(new_mesh->textures, (new_mesh->num_textures + aiGetMaterialTextureCount(mat, aiTextureType_SPECULAR)) * sizeof(Texture));
+  for (u8 i; i <aiGetMaterialTextureCount(mat, aiTextureType_SPECULAR); i++) new_mesh->textures[new_mesh->num_textures++] = &specularMaps[i];
 
   Texture* normalMaps = model_load_material_textures(model, mat, aiTextureType_HEIGHT, "texture_normal");
-  new_mesh->textures = (Texture*) realloc(new_mesh->textures, (new_mesh->num_textures + aiGetMaterialTextureCount(mat, aiTextureType_HEIGHT)) * sizeof(Texture));
-  for (u8 i; i < aiGetMaterialTextureCount(mat,aiTextureType_HEIGHT); i++) new_mesh->textures[new_mesh->num_textures++] = normalMaps[i];
+  new_mesh->textures[new_mesh->num_textures] = (Texture*) realloc(new_mesh->textures, (new_mesh->num_textures + aiGetMaterialTextureCount(mat, aiTextureType_HEIGHT)) * sizeof(Texture));
+  for (u8 i; i < aiGetMaterialTextureCount(mat,aiTextureType_HEIGHT); i++) new_mesh->textures[new_mesh->num_textures++] = &normalMaps[i];
 
   Texture* heightMaps = model_load_material_textures(model, mat, aiTextureType_AMBIENT, "texture_height");
-  new_mesh->textures = (Texture*) realloc(new_mesh->textures, (new_mesh->num_textures + aiGetMaterialTextureCount(mat, aiTextureType_AMBIENT)) * sizeof(Texture));
-  for (u8 i; i < aiGetMaterialTextureCount(mat,aiTextureType_AMBIENT); i++) new_mesh->textures[new_mesh->num_textures++] = heightMaps[i];
+  new_mesh->textures[new_mesh->num_textures] = (Texture*) realloc(new_mesh->textures, (new_mesh->num_textures + aiGetMaterialTextureCount(mat, aiTextureType_AMBIENT)) * sizeof(Texture));
+  for (u8 i; i < aiGetMaterialTextureCount(mat,aiTextureType_AMBIENT); i++) new_mesh->textures[new_mesh->num_textures++] = &heightMaps[i];
 }
 
 void model_process_node(Model *model, struct aiNode *node, const struct aiScene *scene) {

@@ -40,7 +40,7 @@ void handle_inputs(GLFWwindow*);
 
 Canvas canvas = { NULL, WIDTH, HEIGHT };
 Camera cam = { WIDTH, HEIGHT, FOV, NEAR, FAR, { 0, 5, 5 }, { 0, 0, -1 }, { 1, 0, 0 } };
-Model backpack = { {}, 0, {}, 0, "mod/backpack/", 1 };
+Model backpack = { 0, 0, 1, {}, {}, "mod/backpack/" };
 
 mat4 model, view, proj;
 f32 last_mouse_x, last_mouse_y;
@@ -59,6 +59,7 @@ u8 toggle;
 void main() {
   canvas_init(&canvas, "Light", (CanvasInitConfig) { GL_MIRRORED_REPEAT, GL_MIRRORED_REPEAT, GL_LINEAR, GL_LINEAR, (RGBA) { 0, 0, 0.07, 1 }, 0, 1, 1, key_callback, mouse_callback });
 
+  model_setup(&backpack, "backpack.obj");
 
   u32 VAO = canvas_create_VAO();
   u32 VBO = canvas_create_VBO(sizeof(cube), cube, GL_STATIC_DRAW);
@@ -94,6 +95,7 @@ void main() {
   generate_view_mat(cam, view);
 
   while (!glfwWindowShouldClose(canvas.window)) {
+    model_draw(&backpack, shader_obj);
     // Draw lights
     glUseProgram(shader_lig);
     canvas_unim4(shader_lig, "PROJ", proj[0]);

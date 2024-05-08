@@ -14,6 +14,7 @@ typedef int16_t  i16;
 typedef int32_t  i32;
 typedef float    f32;
 typedef double   f64;
+typedef char     c8;
 
 typedef struct {
   u16 width, height;
@@ -27,10 +28,13 @@ typedef struct {
 } Canvas;
 
 typedef struct {
-  GLenum wrap_s, wrap_t, min_filter, mag_filter;
-  u8 capture_mouse, use_keyboard, use_mouse;
-  void (*key_callback)   (GLFWwindow*, i32, i32, i32, i32);
-  void (*mouse_callback) (GLFWwindow*, f64, f64);
+  vec3 col;
+  f64  amb, dif, spc, shi;
+  i32 s_dif, s_spc, s_emt;
+} Material;
+
+typedef struct {
+  u8 capture_mouse;
   char* title;
 } CanvasInitConfig;
 
@@ -43,20 +47,13 @@ void canvas_init(Canvas* canvas, CanvasInitConfig config) {
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
   canvas->window = glfwCreateWindow(canvas->width, canvas->height, config.title, NULL, NULL);
-  ASSERT(canvas->window, "Failed creating a window");
   glfwMakeContextCurrent(canvas->window);
-  ASSERT(gladLoadGLLoader((GLADloadproc) glfwGetProcAddress), "Failed loading glad");
+  gladLoadGLLoader((GLADloadproc) glfwGetProcAddress);
   glViewport(0, 0, canvas->width, canvas->height);
   glEnable(GL_DEPTH_TEST);
-  glClearColor(0, 0, 0, 1);
+  glClearColor(0.3, 0.3, 0.3, 1);
 
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,     config.wrap_s);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,     config.wrap_t);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, config.min_filter);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, config.mag_filter);
   if (config.capture_mouse) glfwSetInputMode(canvas->window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-  if (config.use_keyboard)  glfwSetKeyCallback(canvas->window, config.key_callback);
-  if (config.use_mouse)     glfwSetCursorPosCallback(canvas->window, config.mouse_callback);
 }
 
 // --- Matrix
@@ -75,7 +72,7 @@ void generate_view_mat(Camera cam, mat4 to) {
 
 // --- Texture
 
-u32 canvas_create_texture(GLenum unit, char path[]) {
+u32 canvas_create_texture(GLenum unit, char path[], GLenum wrap_s, GLenum wrap_t, GLenum min_filter, GLenum mag_filter) {
   FILE* img = fopen(path, "r");
   ASSERT(img != NULL, "Can't open image");
   u16 width, height;
@@ -94,6 +91,10 @@ u32 canvas_create_texture(GLenum unit, char path[]) {
   glGenTextures(1, &texture);
   glActiveTexture(unit);
   glBindTexture(GL_TEXTURE_2D, texture);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,     wrap_s);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,     wrap_t);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, min_filter);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, mag_filter);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_FLOAT, buffer);
   glGenerateMipmap(GL_TEXTURE_2D);
 
@@ -180,3 +181,14 @@ void canvas_uni2f(u16 s, char u[], f32 v1, f32 v2)         { glUniform2f(UNI(s, 
 void canvas_uni3i(u16 s, char u[], i32 v1, i32 v2, i32 v3) { glUniform3i(UNI(s, u), v1, v2, v3); }
 void canvas_uni3f(u16 s, char u[], f32 v1, f32 v2, f32 v3) { glUniform3f(UNI(s, u), v1, v2, v3); }
 void canvas_unim4(u16 s, char u[], const f32* v)           { glUniformMatrix4fv(UNI(s, u), 1, GL_FALSE, (const f32*) (v)); }
+
+void canvas_set_material(u32 shader, Material mat) {
+  canvas_uni3f(shader, "MAT.COL", mat.col[0], mat.col[1], mat.col[2]);
+  canvas_uni1f(shader, "MAT.AMB", mat.amb);
+  canvas_uni1f(shader, "MAT.DIF", mat.dif);
+  canvas_uni1f(shader, "MAT.SPC", mat.spc);
+  canvas_uni1f(shader, "MAT.SHI", mat.shi);
+  canvas_uni1i(shader, "MAT.S_DIF", mat.s_dif);
+  canvas_uni1i(shader, "MAT.S_SPC", mat.s_spc);
+  canvas_uni1i(shader, "MAT.S_EMT", mat.s_emt);
+}

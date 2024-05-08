@@ -19,5 +19,6 @@ void main() {
   tex = aTex + TEX_INNSET;
   tex *= TEX_SCALE.s == 0 ? vec2(1) : TEX_SCALE;
   if (TEX_OUTSET.s != 0) tex = tex - (TEX_OUTSET * floor(tex / TEX_OUTSET));
+  tex.t = 1 - tex.t;
   gl_Position = PROJ * VIEW * MODEL * vec4(aPos, 1);
 }

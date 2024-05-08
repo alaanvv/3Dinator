@@ -1,292 +1,319 @@
 #include "canvas.h"
+#include "meshes.h" 
 
 #define MIN(x, y) (x < y ? x : y)
 #define MAX(x, y) (x > y ? x : y)
 #define CLAMP(x, y, z) (MAX(MIN(z, y), x))
-#define CIRCULAR_CLAMP(x, y, z) (y < x ? z : y > z ? x : y)
-
 #define PI  3.14159
-#define TAU PI * 2
 #define PI2 PI / 2
 #define PI4 PI / 4
 
 #define WIDTH  1920
 #define HEIGHT 1080
-#define SPEED 0.1 
+#define SPEED 0.1
 #define SENSITIVITY 0.001
-#define CAMERA_LOCK PI4 * 0.99
+#define CAMERA_LOCK PI2 * 0.9
 #define FOV PI4
-#define NEAR 0.1
-#define FAR  100
 
-void set_material(u32, vec3, vec3, vec3, vec3, i32, i32, i32, f32, i32, i32, i32, vec2, vec2, vec2);
-void key_callback(GLFWwindow*, i32, i32, i32, i32);
-void mouse_callback(GLFWwindow*, f64, f64);
 void handle_inputs(GLFWwindow*);
 
-// --- Setup
-
-#include "meshes.h" 
-
 Canvas canvas = { WIDTH, HEIGHT };
-Camera cam = { WIDTH, HEIGHT, FOV, NEAR, FAR, 0, 0, { 0, 5, 5 }, { 0, 0, -1 }, { 1, 0, 0 } };
+Camera cam    = { WIDTH, HEIGHT, FOV, 0.1, 100, 0, 0, { 4, 2, 4 }, { 0, 0, -1 }, { 1, 0, 0 }};
 
 mat4 model, view, proj;
-f32 last_mouse_x, last_mouse_y;
-u32 shader_obj, shader_lig;
+vec3 mouse;
 
-vec3 lig = { 0.5, 0.0, 0.8 };
-vec3 col = { 1.0, 1.0, 1.0 };
-vec3 amb = { 0.4, 0.4, 0.4 };
-vec3 dif = { 0.5, 0.5, 0.5 };
+u32 game[8][8] = {
+  { 23, 25, 24, 22, 21, 24, 25, 23 }, // x1 = King
+  { 26, 26, 26, 26, 26, 26, 26, 26 }, // x2 = Queen
+  { 00, 00, 00, 00, 00, 00, 00, 00 }, // x3 = Rook
+  { 00, 00, 00, 00, 00, 00, 00, 00 }, // x4 = Bishop
+  { 00, 00, 00, 00, 00, 00, 00, 00 }, // x5 = Knight
+  { 00, 00, 00, 00, 00, 00, 00 ,00 }, // x6 = Pawn
+  { 16, 16, 16, 16, 16, 16, 16, 16 }, // 1x = White
+  { 13, 15, 14, 12, 11, 14, 15, 13 }, // 2x = Black
+};
 
-u8 toggle;
+i8 selected[2] = { -1, -1 };
 
-
-// --- Main
+// ---
 
 void main() {
-  canvas_init(&canvas, (CanvasInitConfig) { GL_MIRRORED_REPEAT, GL_MIRRORED_REPEAT, GL_LINEAR, GL_LINEAR, 1, 1, 1, key_callback, mouse_callback, "Light" });
+  canvas_init(&canvas, (CanvasInitConfig) { 1, "Chess" });
 
-  u32 VAO = canvas_create_VAO();
-  u32 VBO = canvas_create_VBO(sizeof(cube), cube, GL_STATIC_DRAW);
+  Model* cube = model_create("obj/cube.obj");
+  Model* piece_models[] = { 
+    model_create("obj/king.obj"),
+    model_create("obj/queen.obj"),
+    model_create("obj/rook.obj"),
+    model_create("obj/bishop.obj"),
+    model_create("obj/knight.obj"),
+    model_create("obj/pawn.obj")
+  };
 
-  canvas_vertex_attrib_pointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(f32), (void*) 0);
-  canvas_vertex_attrib_pointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(f32), (void*) (3 * sizeof(f32)));
-  canvas_vertex_attrib_pointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(f32), (void*) (6 * sizeof(f32)));
+  Material black_piece = { { 0.20, 0.20, 0.20 }, 1, 1, 0, 255, 0, 0, 1 };
+  Material white_piece = { { 0.70, 0.70, 0.70 }, 1, 1, 0, 255, 0, 0, 1 };
+  Material selec_piece = { { 0.45, 0.30, 0.60 }, 1, 1, 0, 255, 0, 0, 1 };
+  Material alert_piece = { { 0.95, 0.30, 0.30 }, 1, 1, 0, 255, 0, 0, 1 };
+  Material board       = { { 0.60, 0.60, 0.60 }, 1, 1, 0, 255, 0, 0, 1 };
+  Material board_top   = { { 1.00, 1.00, 1.00 }, 1, 1, 0, 255, 2, 0, 1 };
 
-  shader_lig = shader_create_program("shd/obj.v", "shd/lig.f");
-  shader_obj = shader_create_program("shd/obj.v", "shd/obj.f");
+  u32 shader        = shader_create_program("shd/obj.v", "shd/obj.f");
+  u32 buffer_shader = shader_create_program("shd/obj.v", "shd/buf.f");
 
-  canvas_create_texture(GL_TEXTURE0, "img/wooden-floor.ppm");
-  canvas_create_texture(GL_TEXTURE1, "img/wall.ppm");
-  canvas_create_texture(GL_TEXTURE2, "img/pumpkin.ppm");
-  canvas_create_texture(GL_TEXTURE3, "img/posters.ppm");
-  canvas_create_texture(GL_TEXTURE4, "img/pumpkin-specular.ppm");
-  canvas_create_texture(GL_TEXTURE5, "img/door.ppm");
-
-  canvas_uni3f(shader_obj, "SPT_LIGS[0].COL", 1, 1, 1);
-  canvas_uni3f(shader_obj, "SPT_LIGS[0].POS", 0, 0, 0);
-  canvas_uni1f(shader_obj, "SPT_LIGS[0].CON", 1);
-  canvas_uni1f(shader_obj, "SPT_LIGS[0].LIN", 0.2);
-  canvas_uni1f(shader_obj, "SPT_LIGS[0].QUA", 0.004);
-  canvas_uni1f(shader_obj, "SPT_LIGS[0].INN", cos(0.21));
-  canvas_uni1f(shader_obj, "SPT_LIGS[0].OUT", cos(0.25));
-  canvas_uni3f(shader_obj, "PNT_LIGS[0].COL", lig[0], lig[1], lig[2]);
-  canvas_uni3f(shader_obj, "PNT_LIGS[0].POS", 0, 6.9, 0);
-  canvas_uni1f(shader_obj, "PNT_LIGS[0].CON", 1);
-  canvas_uni1f(shader_obj, "PNT_LIGS[0].LIN", 0.07);
-  canvas_uni1f(shader_obj, "PNT_LIGS[0].QUA", 0.017);
+  canvas_create_texture(GL_TEXTURE0, "img/w.ppm",      GL_MIRRORED_REPEAT, GL_MIRRORED_REPEAT, GL_NEAREST, GL_NEAREST);
+  canvas_create_texture(GL_TEXTURE1, "img/b.ppm",      GL_MIRRORED_REPEAT, GL_MIRRORED_REPEAT, GL_NEAREST, GL_NEAREST);
+  canvas_create_texture(GL_TEXTURE2, "img/board.ppm",  GL_MIRRORED_REPEAT, GL_MIRRORED_REPEAT, GL_NEAREST, GL_NEAREST);
 
   generate_proj_mat(cam, proj);
   generate_view_mat(cam, view);
 
   while (!glfwWindowShouldClose(canvas.window)) {
-    // Draw lights
-    glUseProgram(shader_lig);
-    canvas_unim4(shader_lig, "PROJ", proj[0]);
-    canvas_unim4(shader_lig, "VIEW", view[0]);
+    glUseProgram(buffer_shader);
+    canvas_unim4(buffer_shader, "PROJ", proj[0]);
+    canvas_unim4(buffer_shader, "VIEW", view[0]);
+    canvas_uni3f(buffer_shader, "CAM", cam.pos[0], cam.pos[1], cam.pos[2]);
 
-    glm_mat4_identity(model);
-    glm_translate(model, (vec3) { 0, 6.9, 0 });
-    glm_scale(model, (vec3) { 0.3, 0.3, 0.3 });
-    canvas_uni3f(shader_lig, "COL", lig[0], lig[1], lig[2]);
-    canvas_unim4(shader_lig, "MODEL", model[0]);
-    glDrawArrays(GL_TRIANGLES, 0, 36);
+    for (u8 row = 0; row < 8; row++) {
+      for (u8 col = 0; col < 8; col++) {
+        canvas_uni3f(buffer_shader, "COL", (f32) row / 10, (f32) col / 10, 0);
 
-    // Draw objects
-    glUseProgram(shader_obj);
-    canvas_unim4(shader_obj, "PROJ", proj[0]);
-    canvas_unim4(shader_obj, "VIEW", view[0]);
-    canvas_uni3f(shader_obj, "CAM", cam.pos[0], cam.pos[1], cam.pos[2]);
-    canvas_uni3f(shader_obj, "SPT_LIGS[0].POS", cam.pos[0], cam.pos[1], cam.pos[2]);
-    canvas_uni3f(shader_obj, "SPT_LIGS[0].DIR", cam.dir[0], cam.dir[1], cam.dir[2]);
+        glm_mat4_identity(cube->model_matrix);
+        glm_translate(cube->model_matrix, (vec3) { row + 0.1, 0, col + 0.1 });
+        glm_scale(cube->model_matrix, (vec3) { 0.8, 0.1, 0.8 });
+        model_draw(cube, shader);
 
-    // Pumpkin
-    set_material(shader_obj, col, amb, dif, (vec3) { 0.3, 0.3, 0.3 }, 2, 4, 0, 51, 1, 1, 0, (vec2) { 1, 1 }, (vec2) {}, (vec2) {});
-    glm_mat4_identity(model);
-    glm_translate(model, (vec3) { 9, 0.5, -9 });
-    glm_rotate(model, -PI4 / 2, (vec3) { 0, 1, 0 });
-    canvas_unim4(shader_obj, "MODEL", model[0]);
-    glDrawArrays(GL_TRIANGLES, 0, 36);
+        if (game[row][col] % 100) {
+          Model* piece = piece_models[game[row][col] % 10 - 1];
+          glm_mat4_identity(piece->model_matrix);
+          glm_translate(piece->model_matrix, (vec3) { row + 0.5, 0, col + 0.5 });
+          model_draw(piece, shader);
+        }
+      }
+    }
 
-    // Room floor
-    set_material(shader_obj, col, amb, dif, (vec3) { 0.5, 0.5, 0.5 }, 0, 0, 0, 51, 1, 0, 0, (vec2) { 18, 3 }, (vec2) {}, (vec2) {});
-    glm_mat4_identity(model);
-    glm_scale(model, (vec3) { 20, 0, 20 });
-    canvas_unim4(shader_obj, "MODEL", model[0]);
-    glDrawArrays(GL_TRIANGLES, 0, 6);
-
-    // Room ceil
-    set_material(shader_obj, col, amb, dif, (vec3) {}, 1, 0, 0, 51, 1, 0, 0, (vec2) { 48, 8 }, (vec2) {}, (vec2) {});
-    glm_mat4_identity(model);
-    glm_translate(model, (vec3) { 0, 7, 0 });
-    glm_scale(model, (vec3) { 20, 0, 20 });
-    canvas_unim4(shader_obj, "MODEL", model[0]);
-    glDrawArrays(GL_TRIANGLES, 6, 6);
-
-    // Room walls
-    set_material(shader_obj, col, amb, dif, (vec3) {}, 1, 0, 0, 51, 1, 0, 0, (vec2) { 8 * 20 / 7 * 6, 8 }, (vec2) {}, (vec2) {});
-    glm_mat4_identity(model);
-    glm_translate(model, (vec3) { 0, 3.5, -10 });
-    glm_scale(model, (vec3) { 20, 7, 0 });
-    canvas_unim4(shader_obj, "MODEL", model[0]);
-    glDrawArrays(GL_TRIANGLES, 12, 6);
-
-    glm_mat4_identity(model);
-    glm_translate(model, (vec3) { 0, 3.5, 10 });
-    glm_scale(model, (vec3) { 20, 7, 0 });
-    canvas_unim4(shader_obj, "MODEL", model[0]);
-    glDrawArrays(GL_TRIANGLES, 18, 6);
-
-    glm_mat4_identity(model);
-    glm_translate(model, (vec3) { -10, 3.5, 0 });
-    glm_scale(model, (vec3) { 0, 7, 20 });
-    canvas_unim4(shader_obj, "MODEL", model[0]);
-    glDrawArrays(GL_TRIANGLES, 24, 6);
-
-    glm_mat4_identity(model);
-    glm_translate(model, (vec3) { 10, 3.5, 0 });
-    glm_scale(model, (vec3) { 0, 7, 20 });
-    canvas_unim4(shader_obj, "MODEL", model[0]);
-    glDrawArrays(GL_TRIANGLES, 30, 6);
-
-    // Posters
-    set_material(shader_obj, col, amb, dif, (vec3) { 0.5, 0.5, 0.5 }, 3, 0, 0, 51, 1, 0, 0, (vec2) {}, (vec2) {}, (vec2) {});
-    glm_mat4_identity(model);
-    glm_translate(model, (vec3) { -4, 3.5, -9.999 });
-    glm_rotate(model, PI2 * 0.03, (vec3) { 0, 0, 1 });
-    glm_scale(model, (vec3) { 2.5, 3.5, 0 });
-    canvas_unim4(shader_obj, "MODEL", model[0]);
-    glDrawArrays(GL_TRIANGLES, 12, 6);
-
-    set_material(shader_obj, col, amb, dif, (vec3) { 0.5, 0.5, 0.5 }, 3, 0, 0, 51, 1, 0, 0, (vec2) {}, (vec2) { (f32) 1 / 6 }, (vec2) {});
-    glm_mat4_identity(model);
-    glm_translate(model, (vec3) { 2, 3.5, -9.998 });
-    glm_rotate(model, PI2 * -0.003, (vec3) { 0, 0, 1 });
-    glm_scale(model, (vec3) { 2.5 * 0.8, 3.5 * 0.8, 0 });
-    canvas_unim4(shader_obj, "MODEL", model[0]);
-    glDrawArrays(GL_TRIANGLES, 12, 6);
-
-    set_material(shader_obj, col, amb, dif, (vec3) { 0.5, 0.5, 0.5 }, 3, 0, 0, 51, 1, 0, 0, (vec2) {}, (vec2) { (f32) 2 / 6 }, (vec2) {});
-    glm_mat4_identity(model);
-    glm_translate(model, (vec3) { 6.5, 1.5, -9.997 });
-    glm_rotate(model, PI2 * 0.1, (vec3) { 0, 0, 1 });
-    glm_scale(model, (vec3) { 2.5 * 0.5, 3.5 * 0.6, 0 });
-    canvas_unim4(shader_obj, "MODEL", model[0]);
-    glDrawArrays(GL_TRIANGLES, 12, 6);
-
-    set_material(shader_obj, col, amb, dif, (vec3) { 0.5, 0.5, 0.5 }, 3, 0, 0, 51, 1, 0, 0, (vec2) {}, (vec2) { (f32) 3 / 6 }, (vec2) {});
-    glm_mat4_identity(model);
-    glm_translate(model, (vec3) { 5, 3, -9.996 });
-    glm_rotate(model, PI2 * 0.05, (vec3) { 0, 0, 1 });
-    glm_scale(model, (vec3) { 2.5 * 0.75, 3.5 * 0.75, 0 });
-    canvas_unim4(shader_obj, "MODEL", model[0]);
-    glDrawArrays(GL_TRIANGLES, 12, 6);
-
-    set_material(shader_obj, col, amb, dif, (vec3) { 0.5, 0.5, 0.5 }, 3, 0, 0, 51, 1, 0, 0, (vec2) {}, (vec2) { (f32) 4 / 6 }, (vec2) {});
-    glm_mat4_identity(model);
-    glm_translate(model, (vec3) { -0.2, 2.5, -9.995 });
-    glm_rotate(model, PI2 * 0.02, (vec3) { 0, 0, 1 });
-    glm_scale(model, (vec3) { 2.5, 3.5, 0 });
-    canvas_unim4(shader_obj, "MODEL", model[0]);
-    glDrawArrays(GL_TRIANGLES, 12, 6);
-
-    set_material(shader_obj, col, amb, dif, (vec3) { 0.5, 0.5, 0.5 }, 3, 0, 0, 51, 1, 0, 0, (vec2) {}, (vec2) { (f32) 5 / 6 }, (vec2) {});
-    glm_mat4_identity(model);
-    glm_translate(model, (vec3) { -6.16, 4, -9.995 });
-    glm_rotate(model, PI2 * 0.02, (vec3) { 0, 0, 1 });
-    glm_scale(model, (vec3) { 2.5 * 1, 3.5 * 1, 0 });
-    canvas_unim4(shader_obj, "MODEL", model[0]);
-    glDrawArrays(GL_TRIANGLES, 12, 6);
-
-    // Door
-    set_material(shader_obj, col, amb, dif, (vec3) { 0.6, 0.6, 0.6 }, 5, 0, 0, 51, 1, 0, 0, (vec2) { 6, 1 }, (vec2) {}, (vec2) {});
-    glm_mat4_identity(model);
-    glm_translate(model, (vec3) { -7, 3, 9.999 });
-    glm_scale(model, (vec3) { 3, 6, 0 });
-    canvas_unim4(shader_obj, "MODEL", model[0]);
-    glDrawArrays(GL_TRIANGLES, 18, 6);
-
-    // Finish
-    glfwSwapBuffers(canvas.window); 
-    glfwPollEvents();
     handle_inputs(canvas.window);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    glUseProgram(shader);
+    canvas_uni3f(shader, "PNT_LIGS[0].COL", 1, 1, 1);
+    canvas_uni3f(shader, "PNT_LIGS[0].POS", 0, 8, 4);
+    canvas_uni1f(shader, "PNT_LIGS[0].CON", 1);
+    canvas_uni1f(shader, "PNT_LIGS[0].LIN", 0.07);
+    canvas_uni1f(shader, "PNT_LIGS[0].QUA", 0.017);
+    canvas_unim4(shader, "PROJ", proj[0]);
+    canvas_unim4(shader, "VIEW", view[0]);
+    canvas_uni3f(shader, "CAM", cam.pos[0], cam.pos[1], cam.pos[2]);
+
+    // Board
+    canvas_set_material(shader, board);
+    glm_mat4_identity(cube->model_matrix);
+    glm_scale(cube->model_matrix, (vec3) { 8, 1, 8 });
+    glm_translate(cube->model_matrix, (vec3) { 0, -1, 0 });
+    model_draw(cube, shader);
+
+    canvas_set_material(shader, board_top);
+    glm_mat4_identity(cube->model_matrix);
+    glm_scale(cube->model_matrix, (vec3) { 8, 0.01, 8 });
+    model_draw(cube, shader);
+
+    for (u8 row = 0; row < 8; row++) {
+      for (u8 col = 0; col < 8; col++) {
+        if (!(game[row][col] % 100)) {
+          if (game[row][col] / 100) {
+            canvas_set_material(shader, selec_piece);
+
+            glm_mat4_identity(cube->model_matrix);
+            glm_translate(cube->model_matrix, (vec3) { row, 0, col });
+            glm_scale(cube->model_matrix, (vec3) { 0.7, 0.1, 0.7 });
+            glm_translate(cube->model_matrix, (vec3) { 0.2, 0, 0.2 });
+            model_draw(cube, shader);
+          }
+          continue;
+        }
+
+        canvas_set_material(shader, game[row][col] % 100 < 20 ? white_piece : black_piece);
+        if (selected[0] == row && selected[1] == col) 
+          canvas_set_material(shader, selec_piece);
+        if (game[row][col] / 100) 
+          canvas_set_material(shader, alert_piece);
+
+        glm_mat4_identity(cube->model_matrix);
+        glm_translate(cube->model_matrix, (vec3) { row, 0, col });
+        glm_scale(cube->model_matrix, (vec3) { 0.7, 0.1, 0.7 });
+        glm_translate(cube->model_matrix, (vec3) { 0.2, 0, 0.2 });
+        model_draw(cube, shader);
+
+        Model* curr_piece = piece_models[game[row][col] % 10 - 1];
+        glm_mat4_identity(curr_piece->model_matrix);
+        glm_translate(curr_piece->model_matrix, (vec3) { row + 0.5, 0, col + 0.5 });
+        model_draw(curr_piece, shader);
+      }
+    }
+
+    glfwPollEvents();
+    glfwSwapBuffers(canvas.window); 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   }
 
   glfwTerminate();
 }
 
-// --- Function
+void calc_lateral_diagonal_moves(u8 row, u8 col, c8 mov, u8 max_dis) {
+  u8 dir_flags[4] = { 1, 1, 1, 1 };
+  u8 piece = game[row][col];
+  u8 _row, _col;
 
-void key_callback(GLFWwindow* window, i32 key, i32 scancode, i32 action, i32 mods) {
-  if (action != GLFW_PRESS) return;
+  for (u8 dis = 1; dis <= max_dis; dis++) {
+    for (u8 dir = 0; dir < 4; dir++) {
+      if (!dir_flags[dir]) continue;
 
-  if (key == GLFW_KEY_ESCAPE) glfwSetWindowShouldClose(window, 1); 
-  if (key == GLFW_KEY_F) toggle = 1 - toggle;
-}
+      _row = row + (mov == 'L' ? (dir == 0 ? -dis : dir == 1 ? dis : 0) : (dir == 0 || dir == 1 ? -dis : dir == 2 || dir == 3 ? dis : 0));
+      _col = col + (mov == 'L' ? (dir == 2 ? -dis : dir == 3 ? dis : 0) : (dir == 0 || dir == 2 ? -dis : dir == 1 || dir == 3 ? dis : 0));
 
-void handle_inputs(GLFWwindow* window) {
-  inline void move_cam(vec3 dir) {
-    if (dir[0] || dir[2]) {
-      vec3 move;
-      glm_vec3_scale(dir[0] ? cam.rig : cam.dir, dir[0] ? dir[0] : dir[2], move);
-      glm_vec3_add(cam.pos, move, cam.pos);
+      if (_row < 0 || _row > 7 || _col < 0 || _col > 7 || game[_row][_col] / 10 == piece / 10) { dir_flags[dir] = 0; continue; }
+      if (game[_row][_col] % 100 && game[_row][_col] % 100 / 10 != piece % 100 / 10) dir_flags[dir] = 0;
+      game[_row][_col] += 100;
     }
-    else cam.pos[1] += dir[1];
-    generate_view_mat(cam, view);
   }
-
-  if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) move_cam((vec3) {  SPEED,  0,  0 });
-  if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) move_cam((vec3) { -SPEED,  0,  0 });
-  if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) move_cam((vec3) {  0,  SPEED,  0 });
-  if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) move_cam((vec3) {  0, -SPEED,  0 });
-  if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) move_cam((vec3) {  0,  0,  SPEED });
-  if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) move_cam((vec3) {  0,  0, -SPEED });
-
-  if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) { cam.fov = MIN(cam.fov + PI / 100, FOV); generate_proj_mat(cam, proj); }
-  if (glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS) { cam.fov = MAX(cam.fov - PI / 100, 0.1); generate_proj_mat(cam, proj); }
 }
 
-void mouse_callback(GLFWwindow* window, f64 x, f64 y) {
-  if (last_mouse_x == 0) {
-    last_mouse_x = x;
-    last_mouse_y = y;
+void calc_pawn_moves(u8 row, u8 col) {
+  u8 piece = game[row][col];
+  i8 dir = piece % 100 > 20 ? 1 : -1;
+
+  if (col - 1 >= 0 && game[row + dir][col - 1] % 100 && game[row + dir][col - 1] % 100 / 10 != piece % 100 / 10) game[row + dir][col - 1] += 100;
+  if (col + 1 <= 7 && game[row + dir][col + 1] % 100 && game[row + dir][col + 1] % 100 / 10 != piece % 100 / 10) game[row + dir][col + 1] += 100;
+
+  if (game[row + dir][col] % 100) return;
+  game[row + dir][col] += 100;
+
+  if (row != (piece % 100 > 20 ? 1 : 6) || game[row + dir * 2][col] % 100) return;
+  game[row + dir * 2][col] += 100;
+}
+
+void calc_knight_moves(u8 row, u8 col) {
+  u8 piece = game[row][col];
+  u8 _row, _col;
+
+  for (u8 i = 1; i <= 2; i++) {
+    for (i8 row_m = -1; row_m <= 1; row_m += 2) {
+      for (i8 col_m = -1; col_m <= 1; col_m += 2) {
+        _row = row + (i                * row_m);
+        _col = col + ((i == 1 ? 2 : 1) * col_m);
+
+        if (_row >= 0 && _row <= 7 && _col >= 0 && _col <= 7 && game[_row][_col] % 100 / 10 != piece % 100 / 10)
+          game[_row][_col] += 100;
+      }
+    }
+  }
+}
+
+void update_selection(u8 row, u8 col) {
+  u8 is_movement = game[row][col] / 100;
+  for (u8 row = 0; row < 8; row++)
+    for (u8 col = 0; col < 8; col++)
+      game[row][col] %= 100;
+
+  if (is_movement) {
+    u8 piece = game[selected[0]][selected[1]];
+    game[selected[0]][selected[1]] = 0;
+    if ((row == 0 || row == 7) && piece % 10 == 6) piece -= 4;
+    game[row][col] = piece;
+
+    selected[0] = -1;
+    selected[1] = -1;
     return;
   }
 
-  f64 offset_x = (x - last_mouse_x) * SENSITIVITY;
-  f64 offset_y = (last_mouse_y - y) * SENSITIVITY;
-  last_mouse_x = x;
-  last_mouse_y = y;
+  selected[0] = row;
+  selected[1] = col;
 
-  cam.yaw  += offset_x;
-  cam.pitch = CLAMP(-CAMERA_LOCK, cam.pitch + offset_y, CAMERA_LOCK);
+  switch (game[row][col] % 10) {
+    case 1:
+      calc_lateral_diagonal_moves(row, col, 'L', 1);
+      calc_lateral_diagonal_moves(row, col, 'D', 1);
+      break;
+
+    case 2:
+      calc_lateral_diagonal_moves(row, col, 'L', 7);
+      calc_lateral_diagonal_moves(row, col, 'D', 7);
+      break;
+
+    case 3:
+      calc_lateral_diagonal_moves(row, col, 'L', 7);
+      break;
+
+    case 4:
+      calc_lateral_diagonal_moves(row, col, 'D', 7);
+      break;
+
+    case 5:
+      calc_knight_moves(row, col);
+      break;
+
+    case 6:
+      calc_pawn_moves(row, col);
+      break;
+  }
+}
+
+void handle_inputs(GLFWwindow* window) {
+  // MOVEMENT
+  vec3 prompted_move = { 
+    (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS ?  SPEED : 0) + (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS ? -SPEED : 0), 
+    (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS ?  SPEED : 0) + (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS ? -SPEED : 0), 
+    (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS ?  SPEED : 0) + (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS ? -SPEED : 0)
+  };
+
+  if (prompted_move[0] || prompted_move[1] || prompted_move[2]) {
+    vec3 lateral  = { 0, 0, 0 };
+    glm_vec3_scale(cam.rig, prompted_move[0], lateral);
+    vec3 frontal  = { 0, 0, 0 };
+    glm_vec3_scale(cam.dir, prompted_move[2], frontal);
+    vec3 vertical = { 0, prompted_move[1], 0 };
+
+    glm_vec3_add(cam.pos, lateral,  cam.pos);
+    glm_vec3_add(cam.pos, frontal,  cam.pos);
+    glm_vec3_add(cam.pos, vertical, cam.pos);
+    generate_view_mat(cam, view);  
+  };
+
+  // MISC
+  if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) { cam.fov = MIN(cam.fov + PI / 100, FOV); generate_proj_mat(cam, proj); }
+  if (glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS) { cam.fov = MAX(cam.fov - PI / 100, 0.1); generate_proj_mat(cam, proj); }
+  if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) glfwSetWindowShouldClose(window, 1);
+
+  // MOUSE BUTTON
+  if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_RELEASE) mouse[2] = 0;
+  if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS && !mouse[2]) {
+    mouse[2] = 1;
+    f32* buffer = malloc(sizeof(f32) * 3);
+    glReadPixels(WIDTH / 2, HEIGHT / 2, 1, 1, GL_RGB, GL_FLOAT, buffer);
+    update_selection(roundf(buffer[0] * 10), roundf(buffer[1] * 10));
+  }
+
+  // MOUSE MOVEMENT
+  f64 x, y;
+  glfwGetCursorPos(window, &x, &y);
+
+  if (!mouse[0]) {
+    mouse[0] = x;
+    mouse[1] = y;
+  }
+  if (x == mouse[0] && y == mouse[1]) return;
+
+  cam.yaw  += (x - mouse[0]) * SENSITIVITY;
+  cam.pitch = CLAMP(-CAMERA_LOCK, cam.pitch + (mouse[1] - y) * SENSITIVITY, CAMERA_LOCK);
 
   cam.dir[0] = cos(cam.yaw - PI2) * cos(cam.pitch);
   cam.dir[1] = sin(cam.pitch);
   cam.dir[2] = sin(cam.yaw - PI2) * cos(cam.pitch);
-
   cam.rig[0] = cos(cam.yaw) * cos(cam.pitch);
   cam.rig[2] = sin(cam.yaw) * cos(cam.pitch);
+  glm_normalize(cam.rig);
 
   generate_view_mat(cam, view);
-}
-
-void set_material(u32 shader, vec3 col, vec3 amb, vec3 dif, vec3 spc, i32 s_dif, i32 s_spc, i32 s_emt, f32 shi, i32 use_s_dif, i32 use_s_spc, i32 use_s_emt, vec2 tex_scale, vec2 tex_innset, vec2 tex_outset) {
-  canvas_uni3f(shader, "MAT.COL", col[0], col[1], col[2]);
-  canvas_uni3f(shader, "MAT.AMB", amb[0], amb[1], amb[2]);
-  canvas_uni3f(shader, "MAT.DIF", dif[0], dif[1], dif[2]);
-  canvas_uni3f(shader, "MAT.SPC", spc[0], spc[1], spc[2]);
-  canvas_uni1i(shader, "MAT.S_DIF", s_dif);
-  canvas_uni1i(shader, "MAT.S_SPC", s_spc);
-  canvas_uni1i(shader, "MAT.S_EMT", s_emt);
-  canvas_uni1i(shader, "MAT.USE_S_DIF", use_s_dif);
-  canvas_uni1i(shader, "MAT.USE_S_SPC", use_s_spc);
-  canvas_uni1i(shader, "MAT.USE_S_EMT", use_s_emt);
-  canvas_uni1f(shader, "MAT.SHI", shi);
-  canvas_uni2f(shader, "TEX_SCALE", tex_scale[0], tex_scale[1]);
-  canvas_uni2f(shader, "TEX_INNSET", tex_innset[0], tex_innset[1]);
-  canvas_uni2f(shader, "TEX_OUTSET", tex_outset[0], tex_outset[1]);
+  mouse[0] = x;
+  mouse[1] = y;
 }

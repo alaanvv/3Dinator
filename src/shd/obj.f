@@ -20,6 +20,7 @@ struct Material {
   vec3 COL;
   sampler2D S_DIF, S_SPC, S_EMT;
   float SHI, AMB, DIF, SPC;
+  int LIG;
 };
 
 struct DirLig {
@@ -118,6 +119,7 @@ vec3 CalcSptLig(SptLig lig, vec3 normal, vec3 cam, vec3 frag_pos) {
 void main() {
   vec3 _color = vec3(0);
 
+  if (MAT.LIG == 0) {
     if (DIR_LIG_ENABLE == 1)
   for (int i = 0; i < DIR_LIG_AMOUNT; i++)
     _color += CalcDirLig(DIR_LIGS[i], nrm, CAM);
@@ -129,6 +131,10 @@ void main() {
     if (SPT_LIG_ENABLE == 1)
   for (int i = 0; i < SPT_LIG_AMOUNT; i++)
     _color += CalcSptLig(SPT_LIGS[i], nrm, CAM, pos);
+  }
+  else {
+    _color = MAT.COL;
+  }
 
     color = vec4(_color, 1);
 }

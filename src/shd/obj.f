@@ -1,4 +1,4 @@
-#version 330 core
+# version 330 core
 
 #define DIR_LIG_ENABLE 0
 #define PNT_LIG_ENABLE 1
@@ -9,12 +9,6 @@
 #define SPT_LIG_AMOUNT 1
 
 // --- Struct
-
-uniform sampler2D texture_diffuse1;
-uniform sampler2D texture_diffuse2;
-uniform sampler2D texture_diffuse3;
-uniform sampler2D texture_specular1;
-uniform sampler2D texture_specular2;
 
 struct Material {
   vec3 COL;

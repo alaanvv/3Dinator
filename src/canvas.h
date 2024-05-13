@@ -24,7 +24,6 @@ typedef struct {
 } Camera;
 
 typedef struct {
-  i16 width, height;
   GLFWwindow* window;
 } Canvas;
 
@@ -45,8 +44,9 @@ typedef struct {
 } Animation;
 
 typedef struct {
-  u8 capture_mouse;
   char* title;
+  u8 capture_mouse, fullscreen;
+  f32 screen_size;
 } CanvasInitConfig;
 
 typedef f32 Vertex[8];
@@ -75,16 +75,20 @@ typedef struct {
 
 // --- Function
 
-void canvas_init(Canvas* canvas, CanvasInitConfig config) {
+void canvas_init(Canvas* canvas, Camera* cam, CanvasInitConfig config) {
   glfwInit();
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-  canvas->window = glfwCreateWindow(canvas->width, canvas->height, config.title, NULL, NULL);
+  const GLFWvidmode* mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+  cam->width  = mode->width  * config.screen_size;
+  cam->height = mode->height * config.screen_size;
+
+  canvas->window = glfwCreateWindow(cam->width, cam->height, config.title, config.fullscreen ? glfwGetPrimaryMonitor() : NULL, NULL);
   glfwMakeContextCurrent(canvas->window);
   gladLoadGLLoader((GLADloadproc) glfwGetProcAddress);
-  glViewport(0, 0, canvas->width, canvas->height);
+  glViewport(0, 0, cam->width, cam->height);
   glEnable(GL_DEPTH_TEST);
   glClearColor(0.2, 0.2, 0.2, 1);
 

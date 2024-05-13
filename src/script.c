@@ -1,4 +1,5 @@
 #include "canvas.h"
+#include <unistd.h>
 
 #define MIN(x, y) (x < y ? x : y)
 #define MAX(x, y) (x > y ? x : y)
@@ -9,9 +10,9 @@
 #define PI2 PI / 2
 #define PI4 PI / 4
 
-#define WIDTH  1920
-#define HEIGHT 1080
-#define SPEED 0.1 
+#define SCREEN_SIZE 0.5
+#define FULLSCREEN 0
+#define SPEED 3 
 #define UPSCALE 0.2
 #define SENSITIVITY 0.001
 #define CAMERA_LOCK PI2 * 0.99
@@ -21,11 +22,12 @@ void handle_inputs(GLFWwindow*);
 
 // ---
 
-Camera cam    = { WIDTH, HEIGHT, FOV, 0.1, 100, 0, 0, { 0, 0, 0 }, { 0, 0, -1 }, { 1, 0, 0 }};
-Canvas canvas = { WIDTH, HEIGHT };
+Camera cam = { 0, 0, FOV, 0.1, 100, 0, 0, { 0, 0, 0 }, { 0, 0, -1 }, { 1, 0, 0 }};
+Canvas canvas;
 mat4 view, proj, blank;
 vec3 mouse;
 u32 shader;
+f32 fps, tick = 0;
 
 Material m_light = { { 1.00, 1.00, 1.00 }, 0.0, 0.0, 0.0, 000, 0, 0, 0, 1 };
 Material m_cube  = { { 1.00, 1.00, 1.00 }, 0.5, 0.5, 0.5, 255, 0, 0, 1, 0 };
@@ -35,12 +37,12 @@ PntLig light = { { 1, 1, 1 }, { 0.5, 0.5, 0.5 }, 1, 0.07, 0.017 };
 // ---
 
 void main() {
-  canvas_init(&canvas, (CanvasInitConfig) { 1, "Room" });
+  canvas_init(&canvas, &cam, (CanvasInitConfig) { "Room", 1, FULLSCREEN, SCREEN_SIZE });
   glm_mat4_identity(blank);
 
   Model* cube = model_create("obj/cube.obj");
 
-  u32 lowres_fbo = canvas_create_FBO(WIDTH * UPSCALE, HEIGHT * UPSCALE, GL_NEAREST, GL_NEAREST);
+  u32 lowres_fbo = canvas_create_FBO(cam.width * UPSCALE, cam.height * UPSCALE, GL_NEAREST, GL_NEAREST);
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
   generate_proj_mat(cam, proj);
@@ -57,6 +59,9 @@ void main() {
 
   f32 acc = 0;
   while (!glfwWindowShouldClose(canvas.window)) {
+    fps = 1 / (glfwGetTime() - tick);
+    tick = glfwGetTime();
+
     canvas_set_material(shader, m_light);
     glm_mat4_identity(cube->model);
     model_draw(cube, shader);
@@ -66,24 +71,23 @@ void main() {
     glm_translate(cube->model, (vec3) { sin(acc) * 5, 0, cos(acc) * 5 });
     model_draw(cube, shader);
 
-    glBlitNamedFramebuffer(0, lowres_fbo, 0, 0, WIDTH, HEIGHT, 0, 0, WIDTH * UPSCALE, HEIGHT * UPSCALE, GL_COLOR_BUFFER_BIT, GL_NEAREST);
-    glBlitNamedFramebuffer(lowres_fbo, 0, 0, 0, WIDTH * UPSCALE, HEIGHT * UPSCALE, 0, 0, WIDTH, HEIGHT, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+    glBlitNamedFramebuffer(0, lowres_fbo, 0, 0, cam.width, cam.height, 0, 0, cam.width * UPSCALE, cam.height * UPSCALE, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+    glBlitNamedFramebuffer(lowres_fbo, 0, 0, 0, cam.width * UPSCALE, cam.height * UPSCALE, 0, 0, cam.width, cam.height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
 
     glfwPollEvents();
     handle_inputs(canvas.window);
     glfwSwapBuffers(canvas.window); 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    acc += 0.01;
+    acc += 1 / fps;
   }
   glfwTerminate();
 }
 
 void handle_inputs(GLFWwindow* window) {
-  // MOVEMENT
   vec3 prompted_move = { 
-    (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS ?  SPEED : 0) + (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS ? -SPEED : 0), 
-    (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS ?  SPEED : 0) + (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS ? -SPEED : 0), 
-    (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS ?  SPEED : 0) + (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS ? -SPEED : 0)
+    (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS ? SPEED / fps : 0) + (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS ? -SPEED / fps : 0), 
+    (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS ? SPEED / fps : 0) + (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS ? -SPEED / fps : 0), 
+    (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS ? SPEED / fps : 0) + (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS ? -SPEED / fps : 0)
   };
 
   if (prompted_move[0] || prompted_move[1] || prompted_move[2]) {
@@ -101,12 +105,8 @@ void handle_inputs(GLFWwindow* window) {
     canvas_uni3f(shader, "CAM", cam.pos[0], cam.pos[1], cam.pos[2]);
   };
 
-  // MISC
-  if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) { cam.fov = MIN(cam.fov + PI / 100, FOV); generate_proj_mat(cam, proj); canvas_unim4(shader, "PROJ", proj[0]); }
-  if (glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS) { cam.fov = MAX(cam.fov - PI / 100, 0.1); generate_proj_mat(cam, proj); canvas_unim4(shader, "PROJ", proj[0]); }
   if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) glfwSetWindowShouldClose(window, 1);
 
-  // MOUSE MOVEMENT
   f64 x, y;
   glfwGetCursorPos(window, &x, &y);
 

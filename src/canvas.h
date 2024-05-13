@@ -59,6 +59,20 @@ typedef struct {
 
 TextureConfig TEXTURE_DEFAULT = { GL_MIRRORED_REPEAT, GL_MIRRORED_REPEAT, GL_NEAREST, GL_NEAREST };
 
+typedef struct {
+  vec3 col, dir;
+} DirLig;
+
+typedef struct {
+  vec3 col, pos;
+  f32  con, lin, qua;
+} PntLig;
+
+typedef struct {
+  vec3 col, pos, dir;
+  f32  con, lin, qua, inn, out;
+} SptLig;
+
 // --- Function
 
 void canvas_init(Canvas* canvas, CanvasInitConfig config) {
@@ -426,4 +440,48 @@ void model_draw(Model* model, u32 shader) {
   glBindVertexArray(model->VAO);
   canvas_unim4(shader, "MODEL", model->model[0]);
   glDrawArrays(GL_TRIANGLES, 0, model->size);
+}
+
+// --- Light
+
+void canvas_set_dir_lig(u32 shader, DirLig dir_lig, u32 i) {
+  char uniform[255];
+  sprintf(uniform, "DIR_LIGS[%i].COL", i);
+  canvas_uni3f(shader, uniform, dir_lig.col[0], dir_lig.col[1], dir_lig.col[2]);
+  sprintf(uniform, "DIR_LIGS[%i].DIR", i);
+  canvas_uni3f(shader, uniform, dir_lig.dir[0], dir_lig.dir[1], dir_lig.dir[2]);
+}
+
+void canvas_set_pnt_lig(u32 shader, PntLig pnt_lig, u32 i) {
+  char uniform[255];
+  sprintf(uniform, "PNT_LIGS[%i].COL", i);
+  canvas_uni3f(shader, uniform, pnt_lig.col[0], pnt_lig.col[1], pnt_lig.col[2]);
+  sprintf(uniform, "PNT_LIGS[%i].POS", i);
+  canvas_uni3f(shader, uniform, pnt_lig.pos[0], pnt_lig.pos[1], pnt_lig.pos[2]);
+  sprintf(uniform, "PNT_LIGS[%i].CON", i);
+  canvas_uni1f(shader, uniform, pnt_lig.con);
+  sprintf(uniform, "PNT_LIGS[%i].LIN", i);
+  canvas_uni1f(shader, uniform, pnt_lig.lin);
+  sprintf(uniform, "PNT_LIGS[%i].QUA", i);
+  canvas_uni1f(shader, uniform, pnt_lig.qua);
+}
+
+void canvas_set_spt_lig(u32 shader, SptLig spt_lig, u32 i) {
+  char uniform[255];
+  sprintf(uniform, "SPT_LIGS[%i].COL", i);
+  canvas_uni3f(shader, uniform, spt_lig.col[0], spt_lig.col[1], spt_lig.col[2]);
+  sprintf(uniform, "SPT_LIGS[%i].POS", i);
+  canvas_uni3f(shader, uniform, spt_lig.pos[0], spt_lig.pos[1], spt_lig.pos[2]);
+  sprintf(uniform, "SPT_LIGS[%i].DIR", i);
+  canvas_uni3f(shader, uniform, spt_lig.dir[0], spt_lig.dir[1], spt_lig.dir[2]);
+  sprintf(uniform, "SPT_LIGS[%i].CON", i);
+  canvas_uni1f(shader, uniform, spt_lig.con);
+  sprintf(uniform, "SPT_LIGS[%i].LIN", i);
+  canvas_uni1f(shader, uniform, spt_lig.lin);
+  sprintf(uniform, "SPT_LIGS[%i].QUA", i);
+  canvas_uni1f(shader, uniform, spt_lig.qua);
+  sprintf(uniform, "SPT_LIGS[%i].INN", i);
+  canvas_uni1f(shader, uniform, spt_lig.inn);
+  sprintf(uniform, "SPT_LIGS[%i].OUT", i);
+  canvas_uni1f(shader, uniform, spt_lig.out);
 }

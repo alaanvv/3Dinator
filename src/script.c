@@ -14,10 +14,8 @@
 #define SPEED 0.1 
 #define UPSCALE 0.2
 #define SENSITIVITY 0.001
-#define CAMERA_LOCK PI4 * 0.99
+#define CAMERA_LOCK PI2 * 0.99
 #define FOV PI4
-
-// ---
 
 void handle_inputs(GLFWwindow*);
 
@@ -31,6 +29,8 @@ u32 shader;
 
 Material m_light = { { 1.00, 1.00, 1.00 }, 0.0, 0.0, 0.0, 000, 0, 0, 0, 1 };
 Material m_cube  = { { 1.00, 1.00, 1.00 }, 0.5, 0.5, 0.5, 255, 0, 0, 1, 0 };
+
+PntLig light = { { 1, 1, 1 }, { 0.5, 0.5, 0.5 }, 1, 0.07, 0.017 };
 
 // ---
 
@@ -51,23 +51,16 @@ void main() {
 
   shader = shader_create_program("shd/obj.v", "shd/obj.f");
   
-  canvas_uni3f(shader, "PNT_LIGS[0].COL", 1, 1, 1);
-  canvas_uni3f(shader, "PNT_LIGS[0].POS", 0.5, 0.5, 0.5);
-  canvas_uni1f(shader, "PNT_LIGS[0].CON", 1);
-  canvas_uni1f(shader, "PNT_LIGS[0].LIN", 0.07);
-  canvas_uni1f(shader, "PNT_LIGS[0].QUA", 0.017);
+  canvas_set_pnt_lig(shader, light, 0);
+  canvas_unim4(shader, "PROJ", proj[0]);
+  canvas_unim4(shader, "VIEW", view[0]);
 
   f32 acc = 0;
   while (!glfwWindowShouldClose(canvas.window)) {
-    canvas_unim4(shader, "PROJ", proj[0]);
-    canvas_unim4(shader, "VIEW", view[0]);
-
-    // Light
     canvas_set_material(shader, m_light);
     glm_mat4_identity(cube->model);
     model_draw(cube, shader);
 
-    // Cube
     canvas_set_material(shader, m_cube);
     glm_mat4_identity(cube->model);
     glm_translate(cube->model, (vec3) { sin(acc) * 5, 0, cos(acc) * 5 });
@@ -104,12 +97,13 @@ void handle_inputs(GLFWwindow* window) {
     glm_vec3_add(cam.pos, frontal,  cam.pos);
     glm_vec3_add(cam.pos, vertical, cam.pos);
     generate_view_mat(cam, view);  
+    canvas_unim4(shader, "VIEW", view[0]);
     canvas_uni3f(shader, "CAM", cam.pos[0], cam.pos[1], cam.pos[2]);
   };
 
   // MISC
-  if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) { cam.fov = MIN(cam.fov + PI / 100, FOV); generate_proj_mat(cam, proj); }
-  if (glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS) { cam.fov = MAX(cam.fov - PI / 100, 0.1); generate_proj_mat(cam, proj); }
+  if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) { cam.fov = MIN(cam.fov + PI / 100, FOV); generate_proj_mat(cam, proj); canvas_unim4(shader, "PROJ", proj[0]); }
+  if (glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS) { cam.fov = MAX(cam.fov - PI / 100, 0.1); generate_proj_mat(cam, proj); canvas_unim4(shader, "PROJ", proj[0]); }
   if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) glfwSetWindowShouldClose(window, 1);
 
   // MOUSE MOVEMENT
@@ -133,6 +127,7 @@ void handle_inputs(GLFWwindow* window) {
   glm_normalize(cam.rig);
 
   generate_view_mat(cam, view);
+  canvas_unim4(shader, "VIEW", view[0]);
   mouse[0] = x;
   mouse[1] = y;
 }

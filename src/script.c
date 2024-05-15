@@ -1,15 +1,6 @@
 #include "canvas.h"
 #include <unistd.h>
 
-#define MIN(x, y) (x < y ? x : y)
-#define MAX(x, y) (x > y ? x : y)
-#define CLAMP(x, y, z) (MAX(MIN(z, y), x))
-
-#define PI  3.14159
-#define TAU PI * 2
-#define PI2 PI / 2
-#define PI4 PI / 4
-
 #define SCREEN_SIZE 0.5
 #define FULLSCREEN 0
 #define SPEED 3 
@@ -22,9 +13,7 @@ void handle_inputs(GLFWwindow*);
 
 // ---
 
-Camera cam = { 0, 0, FOV, 0.1, 100, 0, 0, { 0, 0, 0 }, { 0, 0, -1 }, { 1, 0, 0 }};
-Canvas canvas;
-mat4 view, proj, blank;
+Camera cam = { FOV, 0.1, 100, { 0, 0, 0 } };
 vec3 mouse;
 u32 shader;
 f32 fps, tick = 0;
@@ -37,37 +26,32 @@ PntLig light = { { 1, 1, 1 }, { 0.5, 0.5, 0.5 }, 1, 0.07, 0.017 };
 // ---
 
 void main() {
-  canvas_init(&canvas, &cam, (CanvasInitConfig) { "Room", 1, FULLSCREEN, SCREEN_SIZE });
-  glm_mat4_identity(blank);
+  canvas_init(&cam, (CanvasInitConfig) { "Room", 1, FULLSCREEN, SCREEN_SIZE });
 
-  Model* cube = model_create("obj/cube.obj");
+  Model* cube = model_create("obj/cube.obj", 1, &m_cube);
 
   u32 lowres_fbo = canvas_create_FBO(cam.width * UPSCALE, cam.height * UPSCALE, GL_NEAREST, GL_NEAREST);
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-  generate_proj_mat(cam, proj);
-  generate_view_mat(cam, view);
 
   canvas_create_texture(GL_TEXTURE0, "img/w.ppm", TEXTURE_DEFAULT);
   canvas_create_texture(GL_TEXTURE1, "img/b.ppm", TEXTURE_DEFAULT);
 
   shader = shader_create_program("shd/obj.v", "shd/obj.f");
+
+  generate_proj_mat(&cam, shader);
+  generate_view_mat(&cam, shader);
   
   canvas_set_pnt_lig(shader, light, 0);
-  canvas_unim4(shader, "PROJ", proj[0]);
-  canvas_unim4(shader, "VIEW", view[0]);
 
   f32 acc = 0;
-  while (!glfwWindowShouldClose(canvas.window)) {
-    fps = 1 / (glfwGetTime() - tick);
-    tick = glfwGetTime();
+  while (!glfwWindowShouldClose(cam.window)) {
+    update_fps(&fps, &tick);
 
+    model_bind(cube, shader);
     canvas_set_material(shader, m_light);
-    glm_mat4_identity(cube->model);
     model_draw(cube, shader);
 
-    canvas_set_material(shader, m_cube);
-    glm_mat4_identity(cube->model);
+    model_bind(cube, shader);
     glm_translate(cube->model, (vec3) { sin(acc) * 5, 0, cos(acc) * 5 });
     model_draw(cube, shader);
 
@@ -75,8 +59,8 @@ void main() {
     glBlitNamedFramebuffer(lowres_fbo, 0, 0, 0, cam.width * UPSCALE, cam.height * UPSCALE, 0, 0, cam.width, cam.height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
 
     glfwPollEvents();
-    handle_inputs(canvas.window);
-    glfwSwapBuffers(canvas.window); 
+    handle_inputs(cam.window);
+    glfwSwapBuffers(cam.window); 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     acc += 1 / fps;
   }
@@ -100,8 +84,7 @@ void handle_inputs(GLFWwindow* window) {
     glm_vec3_add(cam.pos, lateral,  cam.pos);
     glm_vec3_add(cam.pos, frontal,  cam.pos);
     glm_vec3_add(cam.pos, vertical, cam.pos);
-    generate_view_mat(cam, view);  
-    canvas_unim4(shader, "VIEW", view[0]);
+    generate_view_mat(&cam, shader);  
     canvas_uni3f(shader, "CAM", cam.pos[0], cam.pos[1], cam.pos[2]);
   };
 
@@ -119,15 +102,11 @@ void handle_inputs(GLFWwindow* window) {
   cam.yaw  += (x - mouse[0]) * SENSITIVITY;
   cam.pitch = CLAMP(-CAMERA_LOCK, cam.pitch + (mouse[1] - y) * SENSITIVITY, CAMERA_LOCK);
 
-  cam.dir[0] = cos(cam.yaw - PI2) * cos(cam.pitch);
-  cam.dir[1] = sin(cam.pitch);
-  cam.dir[2] = sin(cam.yaw - PI2) * cos(cam.pitch);
-  cam.rig[0] = cos(cam.yaw) * cos(cam.pitch);
-  cam.rig[2] = sin(cam.yaw) * cos(cam.pitch);
+  glm_vec3_copy((vec3) { cos(cam.yaw - PI2) * cos(cam.pitch), sin(cam.pitch), sin(cam.yaw - PI2) * cos(cam.pitch) }, cam.dir);
+  glm_vec3_copy((vec3) { cos(cam.yaw) * cos(cam.pitch), 0, sin(cam.yaw) * cos(cam.pitch) }, cam.rig);
   glm_normalize(cam.rig);
 
-  generate_view_mat(cam, view);
-  canvas_unim4(shader, "VIEW", view[0]);
+  generate_view_mat(&cam, shader);
   mouse[0] = x;
   mouse[1] = y;
 }

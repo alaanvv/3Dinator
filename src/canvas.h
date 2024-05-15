@@ -4,8 +4,22 @@
 #include <cglm/cglm.h>
 #include <GLFW/glfw3.h>
 
-#define ASSERT(x, ...) if (!(x)) { printf(__VA_ARGS__); exit(1); }
 #define UNI(shd, uni) (glGetUniformLocation(shd, uni))
+
+#define MIN(x, y) (x < y ? x : y)
+#define MAX(x, y) (x > y ? x : y)
+#define CLAMP(x, y, z) (MAX(MIN(z, y), x))
+#define CIRCULAR_CLAMP(x, y, z) ((y < x) ? z : ((y > z) ? x : y))
+#define RAND(min, max) (random() % (max - min) + min)
+#define ASSERT(x, ...) if (!(x)) { printf(__VA_ARGS__); exit(1); }
+#define PRINT(...) { printf(__VA_ARGS__); printf("\n"); }
+#define VEC2_COMPARE(v1, v2) (v1[0] == v2[0] && v1[1] == v2[1])
+#define VEC3_COMPARE(v1, v2) (v1[0] == v2[0] && v1[1] == v2[1] && v1[2] == v2[2])
+
+#define PI  3.14159
+#define TAU PI * 2
+#define PI2 PI / 2
+#define PI4 PI / 4
 
 typedef uint8_t  u8;
 typedef uint16_t u16;
@@ -17,31 +31,16 @@ typedef float    f32;
 typedef double   f64;
 typedef char     c8;
 
+// Canvas 
+
 typedef struct {
-  u16 width, height;
-  f32 fov, near, far, pitch, yaw;
+  f32 fov, near, far;
   vec3 pos, dir, rig;
-} Camera;
-
-typedef struct {
+  f32 pitch, yaw;
+  u16 width, height;
   GLFWwindow* window;
-} Canvas;
-
-typedef struct {
-  GLenum wrap_s, wrap_t, min_filter, mag_filter;
-} TextureConfig;
-
-typedef struct {
-  vec3 col;
-  f64  amb, dif, spc, shi;
-  i32 s_dif, s_spc, s_emt;
-  u8 lig;
-} Material;
-
-typedef struct {
-  u8  stage, size;
-  f32 pos;
-} Animation;
+  mat4 view, proj;
+} Camera;
 
 typedef struct {
   char* title;
@@ -49,33 +48,7 @@ typedef struct {
   f32 screen_size;
 } CanvasInitConfig;
 
-typedef f32 Vertex[8];
-
-typedef struct {
-  u32 size, VAO, VBO;
-  Vertex* vertexes;
-  mat4 model;
-} Model;
-
-TextureConfig TEXTURE_DEFAULT = { GL_MIRRORED_REPEAT, GL_MIRRORED_REPEAT, GL_NEAREST, GL_NEAREST };
-
-typedef struct {
-  vec3 col, dir;
-} DirLig;
-
-typedef struct {
-  vec3 col, pos;
-  f32  con, lin, qua;
-} PntLig;
-
-typedef struct {
-  vec3 col, pos, dir;
-  f32  con, lin, qua, inn, out;
-} SptLig;
-
-// --- Function
-
-void canvas_init(Canvas* canvas, Camera* cam, CanvasInitConfig config) {
+void canvas_init(Camera* cam, CanvasInitConfig config) {
   glfwInit();
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -85,63 +58,55 @@ void canvas_init(Canvas* canvas, Camera* cam, CanvasInitConfig config) {
   cam->width  = mode->width  * config.screen_size;
   cam->height = mode->height * config.screen_size;
 
-  canvas->window = glfwCreateWindow(cam->width, cam->height, config.title, config.fullscreen ? glfwGetPrimaryMonitor() : NULL, NULL);
-  glfwMakeContextCurrent(canvas->window);
+  cam->window = glfwCreateWindow(cam->width, cam->height, config.title, config.fullscreen ? glfwGetPrimaryMonitor() : NULL, NULL);
+  glfwMakeContextCurrent(cam->window);
   gladLoadGLLoader((GLADloadproc) glfwGetProcAddress);
   glViewport(0, 0, cam->width, cam->height);
   glEnable(GL_DEPTH_TEST);
+  glEnable(GL_ALPHA_TEST);
+  glEnable(GL_BLEND);
   glClearColor(0.2, 0.2, 0.2, 1);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-  if (config.capture_mouse) glfwSetInputMode(canvas->window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+  if (config.capture_mouse) glfwSetInputMode(cam->window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
+  glm_vec3_copy((vec3) { 0, 0, -1 }, cam->dir);
+  glm_vec3_copy((vec3) { 1, 0,  0 }, cam->rig);
 }
 
-// --- Matrix
-
-void generate_proj_mat(Camera cam, mat4 to) {
-  glm_mat4_identity(to);
-  glm_perspective(cam.fov, (f32) cam.width / cam.height, cam.near, cam.far, to);
+void generate_proj_mat(Camera* cam, u32 shader) {
+  glm_mat4_identity(cam->proj);
+  glm_perspective(cam->fov, (f32) cam->width / cam->height, cam->near, cam->far, cam->proj);
+  glUniformMatrix4fv(UNI(shader, "PROJ"), 1, GL_FALSE, cam->proj[0]);
 }
 
-void generate_view_mat(Camera cam, mat4 to) {
+void generate_view_mat(Camera* cam, u32 shader) {
   vec3 target, up;
-  glm_cross(cam.rig, cam.dir, up);
-  glm_vec3_add(cam.pos, cam.dir, target);
-  glm_lookat(cam.pos, target, up, to);
+  glm_cross(cam->rig, cam->dir, up);
+  glm_vec3_add(cam->pos, cam->dir, target);
+  glm_lookat(cam->pos, target, up, cam->view);
+  glUniformMatrix4fv(UNI(shader, "VIEW"), 1, GL_FALSE, cam->view[0]);
 }
 
-// --- Texture
-
-u32 canvas_create_texture(GLenum unit, char path[], TextureConfig config) {
-  FILE* img = fopen(path, "r");
-  ASSERT(img != NULL, "Can't open image");
-  u16 width, height;
-  fscanf(img, "%*s %hi %hi %*i", &width, &height);
-  f32* buffer = malloc(sizeof(f32) * width * height * 3);
-
-  for (u32 i = 0; i < width * height * 3; i += 3) {
-    fscanf(img, "%f %f %f", &buffer[i], &buffer[i + 1], &buffer[i + 2]);
-    buffer[i]     /= 255;
-    buffer[i + 1] /= 255;
-    buffer[i + 2] /= 255;
+void use_screen_space(Camera* cam, u32 shader, u8 use) {
+  if (!use) {
+    glUniformMatrix4fv(UNI(shader, "PROJ"), 1, GL_FALSE, cam->proj[0]);
+    glUniformMatrix4fv(UNI(shader, "VIEW"), 1, GL_FALSE, cam->view[0]);
+    return;
   }
-  fclose(img); 
-
-  u32 texture;
-  glGenTextures(1, &texture);
-  glActiveTexture(unit);
-  glBindTexture(GL_TEXTURE_2D, texture);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,     config.wrap_s);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,     config.wrap_t);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, config.min_filter);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, config.mag_filter);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_FLOAT, buffer);
-  glGenerateMipmap(GL_TEXTURE_2D);
-
-  free(buffer);
-  return texture;
+  mat4 blank;
+  glm_mat4_identity(blank);
+  glUniformMatrix4fv(UNI(shader, "PROJ"), 1, GL_FALSE, blank[0]);
+  glUniformMatrix4fv(UNI(shader, "VIEW"), 1, GL_FALSE, blank[0]);
 }
 
-// --- Object
+void update_fps(f32* fps, f32* tick) {
+  *fps = 1 / (glfwGetTime() - *tick);
+  *tick = glfwGetTime();
+}
+
+
+// Object
 
 u32 canvas_create_VBO(u32 size, const void* data, GLenum usage) {
   u32 VBO;
@@ -186,12 +151,12 @@ void canvas_vertex_attrib_pointer(u8 location, u8 amount, GLenum type, GLenum no
   glEnableVertexAttribArray(location);
 }
 
-// --- Shader
+// Shader
 
 u32 shader_create_program(char vertex_path[], char fragment_path[]) {
   u32 create_shader(GLenum type, char path[], char name[]) {
     FILE* file = fopen(path, "r");
-    ASSERT(file != NULL, "Can't open %s shader", name);
+    ASSERT(file, "Can't open %s shader (%s)", name, path);
     i32 success;
 
     fseek(file, 0, SEEK_END);
@@ -208,7 +173,7 @@ u32 shader_create_program(char vertex_path[], char fragment_path[]) {
     glCompileShader(shader);
 
     glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-    ASSERT(success, "Error compiling %s shader", name);
+    ASSERT(success, "Error compiling %s shader (%s)", name, path);
     return shader;
   }
 
@@ -254,7 +219,53 @@ void canvas_uni2i(u16 s, char u[], i32 v1, i32 v2)         { glUniform2i(UNI(s, 
 void canvas_uni2f(u16 s, char u[], f32 v1, f32 v2)         { glUniform2f(UNI(s, u), v1, v2); }
 void canvas_uni3i(u16 s, char u[], i32 v1, i32 v2, i32 v3) { glUniform3i(UNI(s, u), v1, v2, v3); }
 void canvas_uni3f(u16 s, char u[], f32 v1, f32 v2, f32 v3) { glUniform3f(UNI(s, u), v1, v2, v3); }
-void canvas_unim4(u16 s, char u[], const f32* v)           { glUniformMatrix4fv(UNI(s, u), 1, GL_FALSE, (const f32*) (v)); }
+void canvas_unim4(u16 s, char u[], const f32* m)           { glUniformMatrix4fv(UNI(s, u), 1, GL_FALSE, m); }
+
+// Texture
+
+typedef struct {
+  GLenum wrap_s, wrap_t, min_filter, mag_filter;
+} TextureConfig;
+
+TextureConfig TEXTURE_DEFAULT = { GL_MIRRORED_REPEAT, GL_MIRRORED_REPEAT, GL_NEAREST, GL_NEAREST };
+
+u32 canvas_create_texture(GLenum unit, char path[], TextureConfig config) {
+  FILE* img = fopen(path, "r");
+  ASSERT(img, "Can't open image (%s)", path);
+
+  u16 ppm, width, height, max_color;
+  fscanf(img, "P%hi %hi %hi %hi", &ppm, &width, &height, &max_color);
+  ASSERT(ppm == 3, "Not a PPM3 (%s)", path);
+  
+  f32* buffer = malloc(sizeof(f32) * width * height * 3);
+  for (u32 i = 0; i < width * height * 3; i += 3) {
+    fscanf(img, "%f %f %f", &buffer[i], &buffer[i + 1], &buffer[i + 2]);
+    glm_vec3_scale(&buffer[i], (f32) 1 / max_color, &buffer[i]);
+  }
+  fclose(img); 
+
+  u32 texture;
+  glGenTextures(1, &texture);
+  glActiveTexture(unit);
+  glBindTexture(GL_TEXTURE_2D, texture);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,     config.wrap_s);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,     config.wrap_t);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, config.min_filter);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, config.mag_filter);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_FLOAT, buffer);
+  glGenerateMipmap(GL_TEXTURE_2D);
+
+  free(buffer);
+  return texture;
+}
+
+// Material
+
+typedef struct {
+  vec3 col;
+  f64  amb, dif, spc, shi;
+  u8   s_dif, s_spc, s_emt, lig, png;
+} Material;
 
 void canvas_set_material(u32 shader, Material mat) {
   canvas_uni3f(shader, "MAT.COL", mat.col[0], mat.col[1], mat.col[2]);
@@ -266,23 +277,44 @@ void canvas_set_material(u32 shader, Material mat) {
   canvas_uni1i(shader, "MAT.S_SPC", mat.s_spc);
   canvas_uni1i(shader, "MAT.S_EMT", mat.s_emt);
   canvas_uni1i(shader, "MAT.LIG", mat.lig);
+  canvas_uni1i(shader, "MAT.PNG", mat.png);
 }
 
-// --- Animation
+// Animation
 
-void animation_run(Animation* anim, f32 rate) {
+typedef struct {
+  u8  stage, size;
+  f32 pos;
+} Animation;
+
+void animation_start(Animation* anim) {
+  anim->stage = 1;
+}
+
+u8 animation_run(Animation* anim, f32 rate) {
+  if (!anim->stage) return 0;
   anim->pos += rate;
-  if (anim->pos < 1) return;
+  if (anim->pos < 1) return 0;
 
   anim->pos = 0;
   anim->stage += 1;
-  if (anim->stage > anim->size)
-    anim->stage = 0;
+  if (anim->stage <= anim->size) return 0;
+  anim->stage = 0;
+  return 1;
 }
 
-// --- Meshes
+// Model 
 
-Vertex* model_parse(const c8* path, u32* size) {
+typedef f32 Vertex[8];
+
+typedef struct {
+  u32 size, VAO, VBO;
+  Vertex* vertexes;
+  mat4 model;
+  Material* material;
+} Model;
+
+Vertex* model_parse(const c8* path, u32* size, f32 scale) {
   vec3*   poss = malloc(sizeof(vec3));
   vec3*   nrms = malloc(sizeof(vec3));
   vec2*   texs = malloc(sizeof(vec2));
@@ -299,6 +331,7 @@ Vertex* model_parse(const c8* path, u32* size) {
     if      (buffer[0] == 'v' && buffer[1] == ' ') {
       poss = realloc(poss, sizeof(vec3) * (++pos_i + 1));
       sscanf(buffer, "v  %f %f %f", &poss[pos_i][0], &poss[pos_i][1], &poss[pos_i][2]);
+      glm_vec3_scale(poss[pos_i], scale, poss[pos_i]);
     } 
     else if (buffer[0] == 'v' && buffer[1] == 'n') {
       nrms = realloc(nrms, sizeof(vec3) * (++nrm_i + 1));
@@ -308,115 +341,34 @@ Vertex* model_parse(const c8* path, u32* size) {
       texs = realloc(texs, sizeof(vec2) * (++tex_i + 1));
       sscanf(buffer, "vt %f %f",    &texs[tex_i][0], &texs[tex_i][1]);
     }
-    else if (buffer[0] == 'f') { 
-      i32 v1[] = {  0, -1, 0 };
-      i32 v2[] = {  0, -1, 0 };
-      i32 v3[] = {  0, -1, 0 };
-      i32 v4[] = { -1, -1, 0 };
+    else if (buffer[0] == 'f') {
+      u32 vs[4][3] = { { 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 } };
 
-      sscanf(buffer, "f %d/  /%d %d/  /%d %d/  /%d",          &v1[0],         &v1[2], &v2[0],         &v2[2], &v3[0],         &v3[2]);
-      sscanf(buffer, "f %d/%d/%d %d/%d/%d %d/%d/%d",          &v1[0], &v1[1], &v1[2], &v2[0], &v2[1], &v2[2], &v3[0], &v3[1], &v3[2]);
-      sscanf(buffer, "f %d/  /%d %d/  /%d %d/  /%d %d/  /%d", &v1[0],         &v1[2], &v2[0],         &v2[2], &v3[0],         &v3[2], &v4[0],         &v4[2]);
-      sscanf(buffer, "f %d/%d/%d %d/%d/%d %d/%d/%d %d/%d/%d", &v1[0], &v1[1], &v1[2], &v2[0], &v2[1], &v2[2], &v3[0], &v3[1], &v3[2], &v4[0], &v4[1], &v4[2]);
+      sscanf(buffer, "f %d/  /%d %d/  /%d %d/  /%d",          &vs[0][0],            &vs[0][2], &vs[1][0],            &vs[1][2], &vs[2][0],            &vs[2][2]);
+      sscanf(buffer, "f %d/%d/%d %d/%d/%d %d/%d/%d",          &vs[0][0], &vs[0][1], &vs[0][2], &vs[1][0], &vs[1][1], &vs[1][2], &vs[2][0], &vs[2][1], &vs[2][2]);
+      sscanf(buffer, "f %d/  /%d %d/  /%d %d/  /%d %d/  /%d", &vs[0][0],            &vs[0][2], &vs[1][0],            &vs[1][2], &vs[2][0],            &vs[2][2], &vs[3][0],            &vs[3][2]);
+      sscanf(buffer, "f %d/%d/%d %d/%d/%d %d/%d/%d %d/%d/%d", &vs[0][0], &vs[0][1], &vs[0][2], &vs[1][0], &vs[1][1], &vs[1][2], &vs[2][0], &vs[2][1], &vs[2][2], &vs[3][0], &vs[3][1], &vs[3][2]);
 
-      if (v4[0] == -1) { // TRI
-        vrts = realloc(vrts, sizeof(Vertex) * (vrt_i + 3)); // I foresee a segfault
-
-        vrts[vrt_i][0] = poss[v1[0]][0];
-        vrts[vrt_i][1] = poss[v1[0]][1];
-        vrts[vrt_i][2] = poss[v1[0]][2];
-        vrts[vrt_i][3] = nrms[v1[2]][0];
-        vrts[vrt_i][4] = nrms[v1[2]][1];
-        vrts[vrt_i][5] = nrms[v1[2]][2];
-        vrts[vrt_i][6] = texs[v1[1]][0];
-        vrts[vrt_i][7] = texs[v1[1]][1];
-        vrt_i++;
-
-        vrts[vrt_i][0] = poss[v2[0]][0];
-        vrts[vrt_i][1] = poss[v2[0]][1];
-        vrts[vrt_i][2] = poss[v2[0]][2];
-        vrts[vrt_i][3] = nrms[v2[2]][0];
-        vrts[vrt_i][4] = nrms[v2[2]][1];
-        vrts[vrt_i][5] = nrms[v2[2]][2];
-        vrts[vrt_i][6] = texs[v2[1]][0];
-        vrts[vrt_i][7] = texs[v2[1]][1];
-        vrt_i++;
-
-        vrts[vrt_i][0] = poss[v3[0]][0];
-        vrts[vrt_i][1] = poss[v3[0]][1];
-        vrts[vrt_i][2] = poss[v3[0]][2];
-        vrts[vrt_i][3] = nrms[v3[2]][0];
-        vrts[vrt_i][4] = nrms[v3[2]][1];
-        vrts[vrt_i][5] = nrms[v3[2]][2];
-        vrts[vrt_i][6] = texs[v3[1]][0];
-        vrts[vrt_i][7] = texs[v3[1]][1];
+      vrts = realloc(vrts, sizeof(Vertex) * (vrt_i + 3));
+      for (u8 i = 0; i < 3; i++) {
+        glm_vec3_copy(poss[vs[i][0]],  vrts[vrt_i]);
+        glm_vec3_copy(nrms[vs[i][2]], &vrts[vrt_i][3]);
+        glm_vec2_copy(texs[vs[i][1]], &vrts[vrt_i][6]);
         vrt_i++;
       }
-      else {
-        vrts = realloc(vrts, sizeof(Vertex) * (vrt_i + 6)); // I foresee a segfault
 
-        vrts[vrt_i][0] = poss[v1[0]][0];
-        vrts[vrt_i][1] = poss[v1[0]][1];
-        vrts[vrt_i][2] = poss[v1[0]][2];
-        vrts[vrt_i][3] = nrms[v1[2]][0];
-        vrts[vrt_i][4] = nrms[v1[2]][1];
-        vrts[vrt_i][5] = nrms[v1[2]][2];
-        vrts[vrt_i][6] = texs[v1[1]][0];
-        vrts[vrt_i][7] = texs[v1[1]][1];
-        vrt_i++;
+      if (!vs[3][0]) continue;
+      vrts = realloc(vrts, sizeof(Vertex) * (vrt_i + 3));
 
-        vrts[vrt_i][0] = poss[v2[0]][0];
-        vrts[vrt_i][1] = poss[v2[0]][1];
-        vrts[vrt_i][2] = poss[v2[0]][2];
-        vrts[vrt_i][3] = nrms[v2[2]][0];
-        vrts[vrt_i][4] = nrms[v2[2]][1];
-        vrts[vrt_i][5] = nrms[v2[2]][2];
-        vrts[vrt_i][6] = texs[v2[1]][0];
-        vrts[vrt_i][7] = texs[v2[1]][1];
-        vrt_i++;
-
-        vrts[vrt_i][0] = poss[v3[0]][0];
-        vrts[vrt_i][1] = poss[v3[0]][1];
-        vrts[vrt_i][2] = poss[v3[0]][2];
-        vrts[vrt_i][3] = nrms[v3[2]][0];
-        vrts[vrt_i][4] = nrms[v3[2]][1];
-        vrts[vrt_i][5] = nrms[v3[2]][2];
-        vrts[vrt_i][6] = texs[v3[1]][0];
-        vrts[vrt_i][7] = texs[v3[1]][1];
-        vrt_i++;
-
-        vrts[vrt_i][0] = poss[v1[0]][0];
-        vrts[vrt_i][1] = poss[v1[0]][1];
-        vrts[vrt_i][2] = poss[v1[0]][2];
-        vrts[vrt_i][3] = nrms[v1[2]][0];
-        vrts[vrt_i][4] = nrms[v1[2]][1];
-        vrts[vrt_i][5] = nrms[v1[2]][2];
-        vrts[vrt_i][6] = texs[v1[1]][0];
-        vrts[vrt_i][7] = texs[v1[1]][1];
-        vrt_i++;
-
-        vrts[vrt_i][0] = poss[v3[0]][0];
-        vrts[vrt_i][1] = poss[v3[0]][1];
-        vrts[vrt_i][2] = poss[v3[0]][2];
-        vrts[vrt_i][3] = nrms[v3[2]][0];
-        vrts[vrt_i][4] = nrms[v3[2]][1];
-        vrts[vrt_i][5] = nrms[v3[2]][2];
-        vrts[vrt_i][6] = texs[v3[1]][0];
-        vrts[vrt_i][7] = texs[v3[1]][1];
-        vrt_i++;
-
-        vrts[vrt_i][0] = poss[v4[0]][0];
-        vrts[vrt_i][1] = poss[v4[0]][1];
-        vrts[vrt_i][2] = poss[v4[0]][2];
-        vrts[vrt_i][3] = nrms[v4[2]][0];
-        vrts[vrt_i][4] = nrms[v4[2]][1];
-        vrts[vrt_i][5] = nrms[v4[2]][2];
-        vrts[vrt_i][6] = texs[v4[1]][0];
-        vrts[vrt_i][7] = texs[v4[1]][1];
+      for (u8 i = 1; i < 4; i++) {
+        glm_vec3_copy(poss[vs[i == 1 ? 0 : i][0]],  vrts[vrt_i]);
+        glm_vec3_copy(nrms[vs[i == 1 ? 0 : i][2]], &vrts[vrt_i][3]);
+        glm_vec2_copy(texs[vs[i == 1 ? 0 : i][1]], &vrts[vrt_i][6]);
         vrt_i++;
       }
     }
   }
+
   fclose(file);
   free(poss);
   free(nrms);
@@ -426,9 +378,10 @@ Vertex* model_parse(const c8* path, u32* size) {
   return vrts;
 }
 
-Model* model_create(const c8* path) {
+Model* model_create(const c8* path, f32 scale, Material* material) {
   Model* model = malloc(sizeof(Model));
-  model->vertexes = model_parse(path, &model->size);
+  model->vertexes = model_parse(path, &model->size, scale);
+  model->material = material;
 
   model->VAO = canvas_create_VAO();
   model->VBO = canvas_create_VBO(model->size * sizeof(Vertex), model->vertexes, GL_STATIC_DRAW);
@@ -439,6 +392,11 @@ Model* model_create(const c8* path) {
   return model;
 }
 
+void model_bind(Model* model, u32 shader) {
+  if (model->material != NULL) canvas_set_material(shader, *model->material);
+  glm_mat4_identity(model->model);
+}
+
 void model_draw(Model* model, u32 shader) {
   glBindBuffer(GL_ARRAY_BUFFER, model->VBO);
   glBindVertexArray(model->VAO);
@@ -446,7 +404,21 @@ void model_draw(Model* model, u32 shader) {
   glDrawArrays(GL_TRIANGLES, 0, model->size);
 }
 
-// --- Light
+// Light
+
+typedef struct {
+  vec3 col, dir;
+} DirLig;
+
+typedef struct {
+  vec3 col, pos;
+  f32  con, lin, qua;
+} PntLig;
+
+typedef struct {
+  vec3 col, pos, dir;
+  f32  con, lin, qua, inn, out;
+} SptLig;
 
 void canvas_set_dir_lig(u32 shader, DirLig dir_lig, u32 i) {
   char uniform[255];

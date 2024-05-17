@@ -8,6 +8,7 @@
 
 #define MIN(x, y) (x < y ? x : y)
 #define MAX(x, y) (x > y ? x : y)
+#define LERP(a, b, c) (a + (b - a) * c)
 #define CLAMP(x, y, z) (MAX(MIN(z, y), x))
 #define CIRCULAR_CLAMP(x, y, z) ((y < x) ? z : ((y > z) ? x : y))
 #define RAND(min, max) (random() % (max - min) + min)
@@ -90,12 +91,14 @@ void generate_view_mat(Camera* cam, u32 shader) {
 
 void use_screen_space(Camera* cam, u32 shader, u8 use) {
   if (!use) {
+    glDepthFunc(GL_LESS);
     glUniformMatrix4fv(UNI(shader, "PROJ"), 1, GL_FALSE, cam->proj[0]);
     glUniformMatrix4fv(UNI(shader, "VIEW"), 1, GL_FALSE, cam->view[0]);
     return;
   }
   mat4 blank;
   glm_mat4_identity(blank);
+  glDepthFunc(GL_ALWAYS);
   glUniformMatrix4fv(UNI(shader, "PROJ"), 1, GL_FALSE, blank[0]);
   glUniformMatrix4fv(UNI(shader, "VIEW"), 1, GL_FALSE, blank[0]);
 }
@@ -311,7 +314,7 @@ typedef struct {
   u32 size, VAO, VBO;
   Vertex* vertexes;
   mat4 model;
-  Material* material;
+  Material** materials;
 } Model;
 
 Vertex* model_parse(const c8* path, u32* size, f32 scale) {
@@ -378,10 +381,10 @@ Vertex* model_parse(const c8* path, u32* size, f32 scale) {
   return vrts;
 }
 
-Model* model_create(const c8* path, f32 scale, Material* material) {
+Model* model_create(const c8* path, f32 scale, Material** materials) {
   Model* model = malloc(sizeof(Model));
   model->vertexes = model_parse(path, &model->size, scale);
-  model->material = material;
+  model->materials = materials;
 
   model->VAO = canvas_create_VAO();
   model->VBO = canvas_create_VBO(model->size * sizeof(Vertex), model->vertexes, GL_STATIC_DRAW);
@@ -392,8 +395,8 @@ Model* model_create(const c8* path, f32 scale, Material* material) {
   return model;
 }
 
-void model_bind(Model* model, u32 shader) {
-  if (model->material != NULL) canvas_set_material(shader, *model->material);
+void model_bind(Model* model, u32 shader, u8 material) {
+  if (material) canvas_set_material(shader, *model->materials[material - 1]);
   glm_mat4_identity(model->model);
 }
 

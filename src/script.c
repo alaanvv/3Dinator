@@ -1,5 +1,4 @@
 #include "canvas.h"
-#include <unistd.h>
 
 #define SCREEN_SIZE 0.5
 #define FULLSCREEN 0
@@ -25,7 +24,7 @@ PntLig light = { { 1, 1, 1 }, { 0.5, 0.5, 0.5 }, 1, 0.07, 0.017 };
 
 // ---
 
-void main() {
+int main() {
   canvas_init(&cam, (CanvasInitConfig) { "Room", 1, FULLSCREEN, SCREEN_SIZE });
 
   Model* cube = model_create("obj/cube.obj", 1, &m_cube);
@@ -65,6 +64,7 @@ void main() {
     acc += 1 / fps;
   }
   glfwTerminate();
+  return 0;
 }
 
 void handle_inputs(GLFWwindow* window) {

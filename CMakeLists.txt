@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 project(3Dinator LANGUAGES C)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 add_subdirectory(inc/glfw)
 add_subdirectory(inc/glad)

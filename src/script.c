@@ -12,10 +12,10 @@ void handle_inputs(GLFWwindow*);
 
 // ---
 
-Camera cam = { FOV, 0.1, 100, { 0, 0, 0 } };
+Camera cam = { FOV, 0.1, 100 };
 vec3 mouse;
-u32 shader;
-f32 fps, tick = 0;
+u32  shader;
+f32  fps;
 
 Material m_light = { { 1.00, 1.00, 1.00 }, 0.0, 0.0, 0.0, 000, 0, 0, 0, 1 };
 Material m_cube  = { { 1.00, 1.00, 1.00 }, 0.5, 0.5, 0.5, 255, 0, 0, 1, 0 };
@@ -26,7 +26,6 @@ PntLig light = { { 1, 1, 1 }, { 0.5, 0.5, 0.5 }, 1, 0.07, 0.017 };
 
 int main() {
   canvas_init(&cam, (CanvasInitConfig) { "Room", 1, FULLSCREEN, SCREEN_SIZE });
-
   Model* cube = model_create("obj/cube.obj", 1, &m_cube);
 
   u32 lowres_fbo = canvas_create_FBO(cam.width * UPSCALE, cam.height * UPSCALE, GL_NEAREST, GL_NEAREST);
@@ -42,16 +41,15 @@ int main() {
 
   canvas_set_pnt_lig(shader, light, 0);
 
-  f32 acc = 0;
   while (!glfwWindowShouldClose(cam.window)) {
-    update_fps(&fps, &tick);
+    update_fps(&fps);
 
     model_bind(cube, shader);
     canvas_set_material(shader, m_light);
     model_draw(cube, shader);
 
     model_bind(cube, shader);
-    glm_translate(cube->model, (vec3) { sin(acc) * 5, 0, cos(acc) * 5 });
+    glm_translate(cube->model, (vec3) { sin(glfwGetTime()) * 5, 0, cos(glfwGetTime()) * 5 });
     model_draw(cube, shader);
 
     glBlitNamedFramebuffer(0, lowres_fbo, 0, 0, cam.width, cam.height, 0, 0, cam.width * UPSCALE, cam.height * UPSCALE, GL_COLOR_BUFFER_BIT, GL_NEAREST);
@@ -61,8 +59,8 @@ int main() {
     handle_inputs(cam.window);
     glfwSwapBuffers(cam.window);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    acc += 1 / fps;
   }
+
   glfwTerminate();
   return 0;
 }

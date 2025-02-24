@@ -98,11 +98,11 @@ void use_screen_space(Camera* cam, u32 shader, u8 use) {
   glUniformMatrix4fv(UNI(shader, "VIEW"), 1, GL_FALSE, blank[0]);
 }
 
-void update_fps(f32* fps, f32* tick) {
-  *fps = 1 / (glfwGetTime() - *tick);
-  *tick = glfwGetTime();
+void update_fps(f32* fps) {
+  static f32 tick = 0;
+  *fps = 1 / (glfwGetTime() - tick);
+  tick = glfwGetTime();
 }
-
 
 // Object
 

@@ -3,7 +3,7 @@
 
 #define SCREEN_SIZE 0.5
 #define FULLSCREEN 0
-#define SPEED 3 
+#define SPEED 3
 #define UPSCALE 0.2
 #define SENSITIVITY 0.001
 #define CAMERA_LOCK PI2 * 0.99
@@ -40,7 +40,7 @@ void main() {
 
   generate_proj_mat(&cam, shader);
   generate_view_mat(&cam, shader);
-  
+
   canvas_set_pnt_lig(shader, light, 0);
 
   f32 acc = 0;
@@ -60,7 +60,7 @@ void main() {
 
     glfwPollEvents();
     handle_inputs(cam.window);
-    glfwSwapBuffers(cam.window); 
+    glfwSwapBuffers(cam.window);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     acc += 1 / fps;
   }
@@ -68,9 +68,9 @@ void main() {
 }
 
 void handle_inputs(GLFWwindow* window) {
-  vec3 prompted_move = { 
-    (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS ? SPEED / fps : 0) + (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS ? -SPEED / fps : 0), 
-    (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS ? SPEED / fps : 0) + (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS ? -SPEED / fps : 0), 
+  vec3 prompted_move = {
+    (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS ? SPEED / fps : 0) + (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS ? -SPEED / fps : 0),
+    (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS ? SPEED / fps : 0) + (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS ? -SPEED / fps : 0),
     (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS ? SPEED / fps : 0) + (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS ? -SPEED / fps : 0)
   };
 
@@ -84,7 +84,7 @@ void handle_inputs(GLFWwindow* window) {
     glm_vec3_add(cam.pos, lateral,  cam.pos);
     glm_vec3_add(cam.pos, frontal,  cam.pos);
     glm_vec3_add(cam.pos, vertical, cam.pos);
-    generate_view_mat(&cam, shader);  
+    generate_view_mat(&cam, shader);
     canvas_uni3f(shader, "CAM", cam.pos[0], cam.pos[1], cam.pos[2]);
   };
 

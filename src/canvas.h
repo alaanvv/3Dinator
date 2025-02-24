@@ -31,7 +31,7 @@ typedef float    f32;
 typedef double   f64;
 typedef char     c8;
 
-// Canvas 
+// Canvas
 
 typedef struct {
   f32 fov, near, far;
@@ -153,32 +153,32 @@ void canvas_vertex_attrib_pointer(u8 location, u8 amount, GLenum type, GLenum no
 
 // Shader
 
+u32 _create_shader(GLenum type, char path[], char name[]) {
+  FILE* file = fopen(path, "r");
+  ASSERT(file, "Can't open %s shader (%s)", name, path);
+  i32 success;
+
+  fseek(file, 0, SEEK_END);
+  int size = ftell(file);
+  rewind(file);
+
+  char shader_source[size];
+  fread(shader_source, sizeof(char), size - 1, file);
+  shader_source[size - 1] = '\0';
+  fclose(file);
+
+  u32 shader = glCreateShader(type);
+  glShaderSource(shader, 1, (const char * const *) &(const char *) { shader_source }, NULL);
+  glCompileShader(shader);
+
+  glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+  ASSERT(success, "Error compiling %s shader (%s)", name, path);
+  return shader;
+}
+
 u32 shader_create_program(char vertex_path[], char fragment_path[]) {
-  u32 create_shader(GLenum type, char path[], char name[]) {
-    FILE* file = fopen(path, "r");
-    ASSERT(file, "Can't open %s shader (%s)", name, path);
-    i32 success;
-
-    fseek(file, 0, SEEK_END);
-    int size = ftell(file);
-    rewind(file);
-
-    char shader_source[size];
-    fread(shader_source, sizeof(char), size - 1, file);
-    shader_source[size - 1] = '\0';
-    fclose(file);
-
-    u32 shader = glCreateShader(type);
-    glShaderSource(shader, 1, (const char * const *) &(const char *) { shader_source }, NULL);
-    glCompileShader(shader);
-
-    glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-    ASSERT(success, "Error compiling %s shader (%s)", name, path);
-    return shader;
-  }
-
-  u32 v_shader = create_shader(GL_VERTEX_SHADER, vertex_path, "vertex");
-  u32 f_shader = create_shader(GL_FRAGMENT_SHADER, fragment_path, "fragment");
+  u32 v_shader = _create_shader(GL_VERTEX_SHADER, vertex_path, "vertex");
+  u32 f_shader = _create_shader(GL_FRAGMENT_SHADER, fragment_path, "fragment");
   u32 shader_program = glCreateProgram();
   glAttachShader(shader_program, v_shader);
   glAttachShader(shader_program, f_shader);
@@ -236,13 +236,13 @@ u32 canvas_create_texture(GLenum unit, char path[], TextureConfig config) {
   u16 ppm, width, height, max_color;
   fscanf(img, "P%hi %hi %hi %hi", &ppm, &width, &height, &max_color);
   ASSERT(ppm == 3, "Not a PPM3 (%s)", path);
-  
+
   f32* buffer = malloc(sizeof(f32) * width * height * 3);
   for (u32 i = 0; i < width * height * 3; i += 3) {
     fscanf(img, "%f %f %f", &buffer[i], &buffer[i + 1], &buffer[i + 2]);
     glm_vec3_scale(&buffer[i], (f32) 1 / max_color, &buffer[i]);
   }
-  fclose(img); 
+  fclose(img);
 
   u32 texture;
   glGenTextures(1, &texture);
@@ -303,7 +303,7 @@ u8 animation_run(Animation* anim, f32 rate) {
   return 1;
 }
 
-// Model 
+// Model
 
 typedef f32 Vertex[8];
 
@@ -332,7 +332,7 @@ Vertex* model_parse(const c8* path, u32* size, f32 scale) {
       poss = realloc(poss, sizeof(vec3) * (++pos_i + 1));
       sscanf(buffer, "v  %f %f %f", &poss[pos_i][0], &poss[pos_i][1], &poss[pos_i][2]);
       glm_vec3_scale(poss[pos_i], scale, poss[pos_i]);
-    } 
+    }
     else if (buffer[0] == 'v' && buffer[1] == 'n') {
       nrms = realloc(nrms, sizeof(vec3) * (++nrm_i + 1));
       sscanf(buffer, "vn %f %f %f", &nrms[nrm_i][0], &nrms[nrm_i][1], &nrms[nrm_i][2]);

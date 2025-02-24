@@ -63,7 +63,7 @@ void canvas_init(Camera* cam, CanvasInitConfig config) {
   glEnable(GL_DEPTH_TEST);
   glEnable(GL_ALPHA_TEST);
   glEnable(GL_BLEND);
-  glClearColor(0.2, 0.2, 0.2, 1);
+  glClearColor(0.0, 0.0, 0.0, 1);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
   if (config.capture_mouse) glfwSetInputMode(cam->window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);

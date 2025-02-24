@@ -26,7 +26,7 @@ PntLig light = { { 1, 1, 1 }, { 0.5, 0.5, 0.5 }, 1, 0.07, 0.017 };
 
 int main() {
   canvas_init(&cam, (CanvasInitConfig) { "Room", 1, FULLSCREEN, SCREEN_SIZE });
-  Model* sphere = model_create("obj/sphere.obj", &m_sphere, 100, 0);
+  Model* sphere = model_create("obj/sphere.obj", &m_sphere, 100);
 
   u32 lowres_fbo = canvas_create_FBO(cam.width * UPSCALE, cam.height * UPSCALE, GL_NEAREST, GL_NEAREST);
   glBindFramebuffer(GL_FRAMEBUFFER, 0);

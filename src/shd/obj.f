@@ -64,11 +64,11 @@ vec3 CalcDirLig(DirLig lig, vec3 normal, vec3 cam) {
   return (ambient + diffuse + specular);
 }
 
-vec3 CalcPntLig(PntLig lig, vec3 normal, vec3 cam, vec3 frag_pos) {
+vec3 CalcPntLig(PntLig lig, vec3 normal, vec3 cam) {
   vec3 view_dir = normalize(cam - pos);
-  vec3 light_dir = normalize(lig.POS - frag_pos);
+  vec3 light_dir = normalize(lig.POS - pos);
 
-  float distance = length(lig.POS - frag_pos);
+  float distance = length(lig.POS - pos);
   float attenuation = 1 / (lig.CON + lig.LIN * distance + lig.QUA * distance * distance);
 
   vec3 ambient = attenuation * lig.COL * MAT.COL * MAT.AMB;
@@ -84,15 +84,15 @@ vec3 CalcPntLig(PntLig lig, vec3 normal, vec3 cam, vec3 frag_pos) {
   return (ambient + diffuse + specular);
 }
 
-vec3 CalcSptLig(SptLig lig, vec3 normal, vec3 cam, vec3 frag_pos) {
+vec3 CalcSptLig(SptLig lig, vec3 normal, vec3 cam) {
   vec3 view_dir = normalize(cam - pos);
-  vec3 light_dir = normalize(lig.POS - frag_pos);
+  vec3 light_dir = normalize(lig.POS - pos);
 
   float theta = dot(light_dir, normalize(-lig.DIR));
   float epsilon = lig.INN - lig.OUT;
   float intensity = clamp((theta - lig.OUT) / epsilon, 0, 1);
 
-  float distance = length(lig.POS - frag_pos);
+  float distance = length(lig.POS - pos);
   float attenuation = 1 / (lig.CON + lig.LIN * distance + lig.QUA * distance * distance);
 
   vec3 ambient = attenuation * lig.COL * MAT.COL * MAT.AMB;
@@ -120,11 +120,11 @@ void main() {
 
     if (PNT_LIG_ENABLE == 1)
       for (int i = 0; i < PNT_LIG_AMOUNT; i++)
-        _color += CalcPntLig(PNT_LIGS[i], nrm, CAM, pos);
+        _color += CalcPntLig(PNT_LIGS[i], nrm, CAM);
 
     if (SPT_LIG_ENABLE == 1)
       for (int i = 0; i < SPT_LIG_AMOUNT; i++)
-        _color += CalcSptLig(SPT_LIGS[i], nrm, CAM, pos);
+        _color += CalcSptLig(SPT_LIGS[i], nrm, CAM);
   }
   else {
     _color = MAT.COL;

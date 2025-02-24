@@ -55,7 +55,7 @@ vec3 CalcDirLig(DirLig lig, vec3 normal, vec3 cam) {
   ambient *= vec3(texture(MAT.S_DIF, tex));
   ambient += vec3(texture(MAT.S_EMT, tex));
 
-  vec3 diffuse = lig.COL * MAT.COL * MAT.DIF * max(dot(normal, light_dir), 0); 
+  vec3 diffuse = lig.COL * MAT.COL * MAT.DIF * max(dot(normal, light_dir), 0);
   diffuse *= vec3(texture(MAT.S_DIF, tex));
 
   vec3 specular = lig.COL * MAT.COL * MAT.SPC * pow(max(dot(view_dir, reflect(-light_dir, normal)), 0), MAT.SHI);
@@ -75,7 +75,7 @@ vec3 CalcPntLig(PntLig lig, vec3 normal, vec3 cam, vec3 frag_pos) {
   ambient *= vec3(texture(MAT.S_DIF, tex));
   ambient += vec3(texture(MAT.S_EMT, tex));
 
-  vec3 diffuse = attenuation * lig.COL * MAT.COL * MAT.DIF * max(dot(normalize(normal), light_dir), 0); 
+  vec3 diffuse = attenuation * lig.COL * MAT.COL * MAT.DIF * max(dot(normalize(normal), light_dir), 0);
   diffuse *= vec3(texture(MAT.S_DIF, tex));
 
   vec3 specular = attenuation * lig.COL * MAT.COL * MAT.SPC * pow(max(dot(view_dir, reflect(-light_dir, normal)), 0), MAT.SHI);
@@ -99,7 +99,7 @@ vec3 CalcSptLig(SptLig lig, vec3 normal, vec3 cam, vec3 frag_pos) {
   ambient *= vec3(texture(MAT.S_DIF, tex));
   ambient += vec3(texture(MAT.S_EMT, tex));
 
-  vec3 diffuse = intensity * attenuation * lig.COL * MAT.COL * MAT.DIF * max(dot(normalize(normal), light_dir), 0); 
+  vec3 diffuse = intensity * attenuation * lig.COL * MAT.COL * MAT.DIF * max(dot(normalize(normal), light_dir), 0);
   diffuse *= vec3(texture(MAT.S_DIF, tex));
 
   vec3 specular = intensity * attenuation * lig.COL * MAT.COL * MAT.SPC * pow(max(dot(view_dir, reflect(-light_dir, normal)), 0), MAT.SHI);
@@ -115,20 +115,20 @@ void main() {
 
   if (MAT.LIG == 0) {
     if (DIR_LIG_ENABLE == 1)
-  for (int i = 0; i < DIR_LIG_AMOUNT; i++)
-    _color += CalcDirLig(DIR_LIGS[i], nrm, CAM);
+      for (int i = 0; i < DIR_LIG_AMOUNT; i++)
+        _color += CalcDirLig(DIR_LIGS[i], nrm, CAM);
 
     if (PNT_LIG_ENABLE == 1)
-  for (int i = 0; i < PNT_LIG_AMOUNT; i++)
-    _color += CalcPntLig(PNT_LIGS[i], nrm, CAM, pos);
+      for (int i = 0; i < PNT_LIG_AMOUNT; i++)
+        _color += CalcPntLig(PNT_LIGS[i], nrm, CAM, pos);
 
     if (SPT_LIG_ENABLE == 1)
-  for (int i = 0; i < SPT_LIG_AMOUNT; i++)
-    _color += CalcSptLig(SPT_LIGS[i], nrm, CAM, pos);
+      for (int i = 0; i < SPT_LIG_AMOUNT; i++)
+        _color += CalcSptLig(SPT_LIGS[i], nrm, CAM, pos);
   }
   else {
     _color = MAT.COL;
   }
 
-    color = vec4(_color, 1);
+  color = vec4(_color, 1);
 }

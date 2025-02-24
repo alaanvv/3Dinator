@@ -312,7 +312,7 @@ typedef struct {
   Material* material;
 } Model;
 
-Vertex* model_parse(const c8* path, u32* size, f32 scale) {
+Vertex* model_parse(const c8* path, u32* size, f32 scale, u8 invert_normals) {
   vec3*   poss = malloc(sizeof(vec3));
   vec3*   nrms = malloc(sizeof(vec3));
   vec2*   texs = malloc(sizeof(vec2));
@@ -334,6 +334,11 @@ Vertex* model_parse(const c8* path, u32* size, f32 scale) {
     else if (buffer[0] == 'v' && buffer[1] == 'n') {
       nrms = realloc(nrms, sizeof(vec3) * (++nrm_i + 1));
       sscanf(buffer, "vn %f %f %f", &nrms[nrm_i][0], &nrms[nrm_i][1], &nrms[nrm_i][2]);
+      if (invert_normals) {
+        nrms[nrm_i][0] *= -1;
+        nrms[nrm_i][1] *= -1;
+        nrms[nrm_i][2] *= -1;
+      }
     }
     else if (buffer[0] == 'v' && buffer[1] == 't') {
       texs = realloc(texs, sizeof(vec2) * (++tex_i + 1));
@@ -376,9 +381,9 @@ Vertex* model_parse(const c8* path, u32* size, f32 scale) {
   return vrts;
 }
 
-Model* model_create(const c8* path, f32 scale, Material* material) {
+Model* model_create(const c8* path, Material* material, f32 scale, u8 invert_normals) {
   Model* model = malloc(sizeof(Model));
-  model->vertexes = model_parse(path, &model->size, scale);
+  model->vertexes = model_parse(path, &model->size, scale, invert_normals);
   model->material = material;
 
   model->VAO = canvas_create_VAO();

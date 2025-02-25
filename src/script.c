@@ -12,13 +12,14 @@ void handle_inputs(GLFWwindow*);
 
 // ---
 
-Camera cam = { FOV, 0.1, 100 };
+Camera cam = { FOV, 0.1, 100, .pos = { 0, 1, 0 } };
 vec3 mouse;
 u32  shader;
 f32  fps;
 
 Material m_light  = { { 1.00, 1.00, 1.00 }, 0.0, 0.0, 0, 0, 1 };
-Material m_sphere = { { 1.00, 1.00, 1.00 }, 0.1, 0.1, 0, 1, 0 };
+Material m_sphere = { { 1.00, 1.00, 1.00 }, 0.1, 0.5, 0, 1, 0 };
+Material m_cube   = { { 1.00, 1.00, 1.00 }, 0.1, 0.5, 0, 1, 0 };
 
 PntLig light = { { 1, 1, 1 }, { 0.5, 0.5, 0.5 }, 1, 0.07, 0.017 };
 
@@ -26,7 +27,9 @@ PntLig light = { { 1, 1, 1 }, { 0.5, 0.5, 0.5 }, 1, 0.07, 0.017 };
 
 int main() {
   canvas_init(&cam, (CanvasInitConfig) { "Room", 1, FULLSCREEN, SCREEN_SIZE });
+
   Model* sphere = model_create("obj/sphere.obj", &m_sphere, 100);
+  Model* cube   = model_create("obj/cube.obj", &m_cube, 1);
 
   u32 lowres_fbo = canvas_create_FBO(cam.width * UPSCALE, cam.height * UPSCALE, GL_NEAREST, GL_NEAREST);
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -51,6 +54,10 @@ int main() {
     model_bind(sphere, shader);
     glm_translate(sphere->model, (vec3) { sin(glfwGetTime()) * 5, 0, cos(glfwGetTime()) * 5 });
     model_draw(sphere, shader);
+
+    model_bind(cube, shader);
+    glm_translate(cube->model, (vec3) { sin(glfwGetTime() + PI) * 5, -0.5, cos(glfwGetTime() + PI) * 5 });
+    model_draw(cube, shader);
 
     glBlitNamedFramebuffer(0, lowres_fbo, 0, 0, cam.width, cam.height, 0, 0, cam.width * UPSCALE, cam.height * UPSCALE, GL_COLOR_BUFFER_BIT, GL_NEAREST);
     glBlitNamedFramebuffer(lowres_fbo, 0, 0, 0, cam.width * UPSCALE, cam.height * UPSCALE, 0, 0, cam.width, cam.height, GL_COLOR_BUFFER_BIT, GL_NEAREST);

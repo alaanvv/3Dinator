@@ -9,10 +9,11 @@
 #define CLAMP(x, y, z) (MAX(MIN(z, y), x))
 #define CIRCULAR_CLAMP(x, y, z) ((y < x) ? z : ((y > z) ? x : y))
 #define RAND(min, max) (random() % (max - min) + min)
-#define ASSERT(x, ...) if (!(x)) { printf(__VA_ARGS__); exit(1); }
 #define PRINT(...) { printf(__VA_ARGS__); printf("\n"); }
+#define ASSERT(x, ...) if (!(x)) { PRINT(__VA_ARGS__); exit(1); }
 #define VEC2_COMPARE(v1, v2) (v1[0] == v2[0] && v1[1] == v2[1])
 #define VEC3_COMPARE(v1, v2) (v1[0] == v2[0] && v1[1] == v2[1] && v1[2] == v2[2])
+#define VERTEX_COPY(from, to) { for (u8 i_ = 0; i_ < 8; i_++) to[i_] = from[i_]; }
 
 #define PI  3.14159
 #define TAU PI * 2
@@ -122,15 +123,15 @@ u32 canvas_create_VAO() {
 u32 canvas_create_FBO(u16 width, u16 height, GLenum min, GLenum mag) {
   u32 FBO;
   glGenFramebuffers(1, &FBO);
-	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+  glBindFramebuffer(GL_FRAMEBUFFER, FBO);
 
-	u32 REN_TEX;
-	glGenTextures(1, &REN_TEX);
-	glBindTexture(GL_TEXTURE_2D, REN_TEX);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, min);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, mag);
-	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, REN_TEX, 0);
+  u32 REN_TEX;
+  glGenTextures(1, &REN_TEX);
+  glBindTexture(GL_TEXTURE_2D, REN_TEX);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, min);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, mag);
+  glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, REN_TEX, 0);
 
   return FBO;
 }
@@ -142,9 +143,9 @@ void canvas_vertex_attrib_pointer(u8 location, u8 amount, GLenum type, GLenum no
 
 // Shader
 
-u32 _create_shader(GLenum type, char path[], char name[]) {
+u32 _create_shader(GLenum type, char path[]) {
   FILE* file = fopen(path, "r");
-  ASSERT(file, "Can't open %s shader (%s)", name, path);
+  ASSERT(file, "Can't open shader (%s)", path);
   i32 success;
 
   fseek(file, 0, SEEK_END);
@@ -157,17 +158,19 @@ u32 _create_shader(GLenum type, char path[], char name[]) {
   fclose(file);
 
   u32 shader = glCreateShader(type);
-  glShaderSource(shader, 1, (const char * const *) &(const char *) { shader_source }, NULL);
+  const char* _shader_source = shader_source;
+  glShaderSource(shader, 1, &_shader_source, NULL);
   glCompileShader(shader);
 
   glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-  ASSERT(success, "Error compiling %s shader (%s)", name, path);
+  ASSERT(success, "Error compiling shader (%s)", path);
   return shader;
 }
 
 u32 shader_create_program(char vertex_path[], char fragment_path[]) {
-  u32 v_shader = _create_shader(GL_VERTEX_SHADER, vertex_path, "vertex");
-  u32 f_shader = _create_shader(GL_FRAGMENT_SHADER, fragment_path, "fragment");
+  u32 v_shader = _create_shader(GL_VERTEX_SHADER, vertex_path);
+  u32 f_shader = _create_shader(GL_FRAGMENT_SHADER, fragment_path);
+
   u32 shader_program = glCreateProgram();
   glAttachShader(shader_program, v_shader);
   glAttachShader(shader_program, f_shader);
@@ -198,6 +201,10 @@ u32 shader_create_program_raw(const char* v_shader_source, const char* f_shader_
   glDeleteShader(v_shader);
   glDeleteShader(f_shader);
 
+  i32 success;
+  glGetProgramiv(shader_program, GL_LINK_STATUS, &success);
+  ASSERT(success, "Error linking shaders");
+
   glUseProgram(shader_program);
   return shader_program;
 }
@@ -212,11 +219,11 @@ void canvas_unim4(u16 s, char u[], const f32* m)           { glUniformMatrix4fv(
 
 // Texture
 
+#define TEXTURE_DEFAULT (TextureConfig) { GL_MIRRORED_REPEAT, GL_MIRRORED_REPEAT, GL_NEAREST, GL_NEAREST }
+
 typedef struct {
   GLenum wrap_s, wrap_t, min_filter, mag_filter;
 } TextureConfig;
-
-TextureConfig TEXTURE_DEFAULT = { GL_MIRRORED_REPEAT, GL_MIRRORED_REPEAT, GL_NEAREST, GL_NEAREST };
 
 u32 canvas_create_texture(GLenum unit, char path[], TextureConfig config) {
   FILE* img = fopen(path, "r");
@@ -314,46 +321,40 @@ void model_parse(Model* model, const c8* path, u32* size, f32 scale) {
   while (fgets(buffer, 256, file)) {
     if      (buffer[0] == 'v' && buffer[1] == ' ') {
       poss = realloc(poss, sizeof(vec3) * (++pos_i + 1));
-      sscanf(buffer, "v  %f %f %f", &poss[pos_i][0], &poss[pos_i][1], &poss[pos_i][2]);
+      sscanf(buffer, "v %f %f %f", &poss[pos_i][0], &poss[pos_i][1], &poss[pos_i][2]);
       glm_vec3_scale(poss[pos_i], scale, poss[pos_i]);
     }
     else if (buffer[0] == 'v' && buffer[1] == 't') {
-      texs = realloc(texs, sizeof(vec2) * (++tex_i + 1));
+      texs = realloc(texs, sizeof(vec2) * (++tex_i + 3));
       sscanf(buffer, "vt %f %f",    &texs[tex_i][0], &texs[tex_i][1]);
     }
     else if (buffer[0] == 'f') {
-      u32 vs[4][3] = { { 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 } };
+      char v_buf[4][256];
+      u8 is_quad = 4 == sscanf(buffer, "f %s %s %s %s", v_buf[0], v_buf[1], v_buf[2], v_buf[3]);
 
-      sscanf(buffer, "f %d       %d       %d",                &vs[0][0],                       &vs[1][0],                       &vs[2][0]);
-      sscanf(buffer, "f %d/  /%d %d/  /%d %d/  /%d",          &vs[0][0],            &vs[0][2], &vs[1][0],            &vs[1][2], &vs[2][0],            &vs[2][2]);
-      sscanf(buffer, "f %d/%d/%d %d/%d/%d %d/%d/%d",          &vs[0][0], &vs[0][1], &vs[0][2], &vs[1][0], &vs[1][1], &vs[1][2], &vs[2][0], &vs[2][1], &vs[2][2]);
-      sscanf(buffer, "f %d       %d       %d       %d",       &vs[0][0],                       &vs[1][0],                       &vs[2][0],                       &vs[3][0]);
-      sscanf(buffer, "f %d/  /%d %d/  /%d %d/  /%d %d/  /%d", &vs[0][0],            &vs[0][2], &vs[1][0],            &vs[1][2], &vs[2][0],            &vs[2][2], &vs[3][0],            &vs[3][2]);
-      sscanf(buffer, "f %d/%d/%d %d/%d/%d %d/%d/%d %d/%d/%d", &vs[0][0], &vs[0][1], &vs[0][2], &vs[1][0], &vs[1][1], &vs[1][2], &vs[2][0], &vs[2][1], &vs[2][2], &vs[3][0], &vs[3][1], &vs[3][2]);
+      vrts = realloc(vrts, sizeof(Vertex) * (vrt_i + (is_quad ? 6 : 3)));
+
+      for (u8 i = 0; i < 3 + is_quad; i++) {
+        u32 pi, ti;
+        sscanf(v_buf[i], "%d/%d", &pi, &ti);
+        glm_vec3_copy(poss[pi], &vrts[vrt_i + i][0]);
+        glm_vec3_copy(texs[ti], &vrts[vrt_i + i][6]);
+      }
 
       vec3 side_1, side_2, nrm;
-      glm_vec3_sub(poss[vs[1][0]], poss[vs[0][0]], side_1);
-      glm_vec3_sub(poss[vs[2][0]], poss[vs[0][0]], side_2);
+      glm_vec3_sub(vrts[vrt_i + 1], vrts[vrt_i + 0], side_1);
+      glm_vec3_sub(vrts[vrt_i + 2], vrts[vrt_i + 0], side_2);
       glm_vec3_cross(side_1, side_2, nrm);
       glm_vec3_normalize(nrm);
 
-      vrts = realloc(vrts, sizeof(Vertex) * (vrt_i + 3));
-      for (u8 i = 0; i < 3; i++) {
-        glm_vec3_copy(poss[vs[i][0]], &vrts[vrt_i][0]);
-        glm_vec3_copy(nrm,            &vrts[vrt_i][3]);
-        glm_vec2_copy(texs[vs[i][1]], &vrts[vrt_i][6]);
-        vrt_i++;
-      }
+      for (u8 i = 0; i < 3 + is_quad; i++)
+        glm_vec3_copy(nrm, &vrts[vrt_i + i][3]);
 
-      if (!vs[3][0]) continue;
-      vrts = realloc(vrts, sizeof(Vertex) * (vrt_i + 3));
+      vrt_i += 3 + is_quad;
+      if (!is_quad) continue;
 
-      for (u8 i = 1; i < 4; i++) {
-        glm_vec3_copy(poss[vs[i == 1 ? 0 : i][0]], &vrts[vrt_i][0]);
-        glm_vec3_copy(nrm,                         &vrts[vrt_i][3]);
-        glm_vec2_copy(texs[vs[i == 1 ? 0 : i][1]], &vrts[vrt_i][6]);
-        vrt_i++;
-      }
+      for (u32 i = vrt_i; vrt_i < i + 2; vrt_i++)
+        VERTEX_COPY(vrts[vrt_i - 4 + (vrt_i - i)], vrts[vrt_i]);
     }
   }
 

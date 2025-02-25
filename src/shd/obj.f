@@ -1,12 +1,4 @@
-# version 330 core
-
-#define DIR_LIG_ENABLE 0
-#define PNT_LIG_ENABLE 1
-#define SPT_LIG_ENABLE 0
-
-#define DIR_LIG_AMOUNT 1
-#define PNT_LIG_AMOUNT 1
-#define SPT_LIG_AMOUNT 1
+#version 330 core
 
 // --- Struct
 
@@ -35,9 +27,13 @@ struct SptLig {
 
 uniform vec2 TEX_SCALE;
 uniform Material MAT;
-uniform DirLig DIR_LIGS[DIR_LIG_AMOUNT];
-uniform PntLig PNT_LIGS[PNT_LIG_AMOUNT];
-uniform SptLig SPT_LIGS[SPT_LIG_AMOUNT];
+uniform DirLig DIR_LIGS[10];
+uniform PntLig PNT_LIGS[10];
+uniform SptLig SPT_LIGS[10];
+
+uniform int DIR_LIG_AMOUNT;
+uniform int PNT_LIG_AMOUNT;
+uniform int SPT_LIG_AMOUNT;
 
 in  vec3 nrm;
 in  vec3 pos;
@@ -101,15 +97,15 @@ void main() {
   vec3 _color = vec3(0);
 
   if (MAT.LIG == 0) {
-    if (DIR_LIG_ENABLE == 1)
+    if (DIR_LIG_AMOUNT > 0)
       for (int i = 0; i < DIR_LIG_AMOUNT; i++)
         _color += CalcDirLig(DIR_LIGS[i], nrm);
 
-    if (PNT_LIG_ENABLE == 1)
+    if (PNT_LIG_AMOUNT > 0)
       for (int i = 0; i < PNT_LIG_AMOUNT; i++)
         _color += CalcPntLig(PNT_LIGS[i], nrm);
 
-    if (SPT_LIG_ENABLE == 1)
+    if (SPT_LIG_AMOUNT > 0)
       for (int i = 0; i < SPT_LIG_AMOUNT; i++)
         _color += CalcSptLig(SPT_LIGS[i], nrm);
   }

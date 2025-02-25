@@ -417,6 +417,7 @@ typedef struct {
 } SptLig;
 
 void canvas_set_dir_lig(u32 shader, DirLig dir_lig, u32 i) {
+  canvas_uni1i(shader, "DIR_LIG_AMOUNT", i + 1);
   char uniform[255];
   sprintf(uniform, "DIR_LIGS[%i].COL", i);
   canvas_uni3f(shader, uniform, dir_lig.col[0], dir_lig.col[1], dir_lig.col[2]);
@@ -425,6 +426,7 @@ void canvas_set_dir_lig(u32 shader, DirLig dir_lig, u32 i) {
 }
 
 void canvas_set_pnt_lig(u32 shader, PntLig pnt_lig, u32 i) {
+  canvas_uni1i(shader, "PNT_LIG_AMOUNT", i + 1);
   char uniform[255];
   sprintf(uniform, "PNT_LIGS[%i].COL", i);
   canvas_uni3f(shader, uniform, pnt_lig.col[0], pnt_lig.col[1], pnt_lig.col[2]);
@@ -439,6 +441,7 @@ void canvas_set_pnt_lig(u32 shader, PntLig pnt_lig, u32 i) {
 }
 
 void canvas_set_spt_lig(u32 shader, SptLig spt_lig, u32 i) {
+  canvas_uni1i(shader, "SPT_LIG_AMOUNT", i + 1);
   char uniform[255];
   sprintf(uniform, "SPT_LIGS[%i].COL", i);
   canvas_uni3f(shader, uniform, spt_lig.col[0], spt_lig.col[1], spt_lig.col[2]);

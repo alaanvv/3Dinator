@@ -261,18 +261,15 @@ u32 canvas_create_texture(GLenum unit, char path[], TextureConfig config) {
 
 typedef struct {
   vec3 col;
-  f64  amb, dif, spc, shi;
-  u8   s_dif, s_spc, s_emt, lig, png;
+  f64  amb, dif;
+  u8   s_dif, s_emt, lig, png;
 } Material;
 
 void canvas_set_material(u32 shader, Material mat) {
   canvas_uni3f(shader, "MAT.COL", mat.col[0], mat.col[1], mat.col[2]);
   canvas_uni1f(shader, "MAT.AMB", mat.amb);
   canvas_uni1f(shader, "MAT.DIF", mat.dif);
-  canvas_uni1f(shader, "MAT.SPC", mat.spc);
-  canvas_uni1f(shader, "MAT.SHI", mat.shi);
   canvas_uni1i(shader, "MAT.S_DIF", mat.s_dif);
-  canvas_uni1i(shader, "MAT.S_SPC", mat.s_spc);
   canvas_uni1i(shader, "MAT.S_EMT", mat.s_emt);
   canvas_uni1i(shader, "MAT.LIG", mat.lig);
   canvas_uni1i(shader, "MAT.PNG", mat.png);

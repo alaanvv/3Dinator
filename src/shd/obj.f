@@ -12,8 +12,8 @@
 
 struct Material {
   vec3 COL;
-  sampler2D S_DIF, S_SPC, S_EMT;
-  float SHI, AMB, DIF, SPC;
+  sampler2D S_DIF, S_EMT;
+  float AMB, DIF;
   int LIG;
 };
 
@@ -33,7 +33,6 @@ struct SptLig {
 
 // --- Setup
 
-uniform vec3 CAM;
 uniform vec2 TEX_SCALE;
 uniform Material MAT;
 uniform DirLig DIR_LIGS[DIR_LIG_AMOUNT];
@@ -47,8 +46,7 @@ out vec4 color;
 
 // --- Function
 
-vec3 CalcDirLig(DirLig lig, vec3 normal, vec3 cam) {
-  vec3 view_dir = normalize(cam - pos);
+vec3 CalcDirLig(DirLig lig, vec3 normal) {
   vec3 light_dir = normalize(-lig.DIR);
 
   vec3 ambient = lig.COL * MAT.COL * MAT.AMB;
@@ -58,14 +56,10 @@ vec3 CalcDirLig(DirLig lig, vec3 normal, vec3 cam) {
   vec3 diffuse = lig.COL * MAT.COL * MAT.DIF * max(dot(normal, light_dir), 0);
   diffuse *= vec3(texture(MAT.S_DIF, tex));
 
-  vec3 specular = lig.COL * MAT.COL * MAT.SPC * pow(max(dot(view_dir, reflect(-light_dir, normal)), 0), MAT.SHI);
-  specular *= vec3(texture(MAT.S_SPC, tex));
-
-  return (ambient + diffuse + specular);
+  return ambient + diffuse;
 }
 
-vec3 CalcPntLig(PntLig lig, vec3 normal, vec3 cam) {
-  vec3 view_dir = normalize(cam - pos);
+vec3 CalcPntLig(PntLig lig, vec3 normal) {
   vec3 light_dir = normalize(lig.POS - pos);
 
   float distance = length(lig.POS - pos);
@@ -78,14 +72,10 @@ vec3 CalcPntLig(PntLig lig, vec3 normal, vec3 cam) {
   vec3 diffuse = attenuation * lig.COL * MAT.COL * MAT.DIF * max(dot(normalize(normal), light_dir), 0);
   diffuse *= vec3(texture(MAT.S_DIF, tex));
 
-  vec3 specular = attenuation * lig.COL * MAT.COL * MAT.SPC * pow(max(dot(view_dir, reflect(-light_dir, normal)), 0), MAT.SHI);
-  specular *= vec3(texture(MAT.S_SPC, tex));
-
-  return (ambient + diffuse + specular);
+  return ambient + diffuse;
 }
 
-vec3 CalcSptLig(SptLig lig, vec3 normal, vec3 cam) {
-  vec3 view_dir = normalize(cam - pos);
+vec3 CalcSptLig(SptLig lig, vec3 normal) {
   vec3 light_dir = normalize(lig.POS - pos);
 
   float theta = dot(light_dir, normalize(-lig.DIR));
@@ -102,10 +92,7 @@ vec3 CalcSptLig(SptLig lig, vec3 normal, vec3 cam) {
   vec3 diffuse = intensity * attenuation * lig.COL * MAT.COL * MAT.DIF * max(dot(normalize(normal), light_dir), 0);
   diffuse *= vec3(texture(MAT.S_DIF, tex));
 
-  vec3 specular = intensity * attenuation * lig.COL * MAT.COL * MAT.SPC * pow(max(dot(view_dir, reflect(-light_dir, normal)), 0), MAT.SHI);
-  specular *= vec3(texture(MAT.S_SPC, tex));
-
-  return (ambient + diffuse + specular);
+  return ambient + diffuse;
 }
 
 // --- Main
@@ -116,15 +103,15 @@ void main() {
   if (MAT.LIG == 0) {
     if (DIR_LIG_ENABLE == 1)
       for (int i = 0; i < DIR_LIG_AMOUNT; i++)
-        _color += CalcDirLig(DIR_LIGS[i], nrm, CAM);
+        _color += CalcDirLig(DIR_LIGS[i], nrm);
 
     if (PNT_LIG_ENABLE == 1)
       for (int i = 0; i < PNT_LIG_AMOUNT; i++)
-        _color += CalcPntLig(PNT_LIGS[i], nrm, CAM);
+        _color += CalcPntLig(PNT_LIGS[i], nrm);
 
     if (SPT_LIG_ENABLE == 1)
       for (int i = 0; i < SPT_LIG_AMOUNT; i++)
-        _color += CalcSptLig(SPT_LIGS[i], nrm, CAM);
+        _color += CalcSptLig(SPT_LIGS[i], nrm);
   }
   else {
     _color = MAT.COL;

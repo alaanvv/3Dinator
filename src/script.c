@@ -17,8 +17,8 @@ vec3 mouse;
 u32  shader;
 f32  fps;
 
-Material m_light  = { { 1.00, 1.00, 1.00 }, 0.0, 0.0, 0.0, 000, 0, 0, 0, 1 };
-Material m_sphere = { { 1.00, 1.00, 1.00 }, 0.1, 0.1, 0.5, 255, 0, 0, 1, 0 };
+Material m_light  = { { 1.00, 1.00, 1.00 }, 0.0, 0.0, 0, 0, 1 };
+Material m_sphere = { { 1.00, 1.00, 1.00 }, 0.1, 0.1, 0, 1, 0 };
 
 PntLig light = { { 1, 1, 1 }, { 0.5, 0.5, 0.5 }, 1, 0.07, 0.017 };
 
@@ -83,7 +83,6 @@ void handle_inputs(GLFWwindow* window) {
     glm_vec3_add(cam.pos, frontal,  cam.pos);
     glm_vec3_add(cam.pos, vertical, cam.pos);
     generate_view_mat(&cam, shader);
-    canvas_uni3f(shader, "CAM", cam.pos[0], cam.pos[1], cam.pos[2]);
   };
 
   if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) glfwSetWindowShouldClose(window, 1);

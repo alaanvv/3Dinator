@@ -94,6 +94,11 @@ vec3 CalcSptLig(SptLig lig, vec3 normal) {
 // --- Main
 
 void main() {
+  if (vec3(texture(MAT.S_DIF, tex)) == vec3(0, 1, 0)) {
+    discard;
+  }
+
+
   vec3 _color = vec3(0);
 
   if (MAT.LIG == 0) {

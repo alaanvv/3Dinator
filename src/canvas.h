@@ -62,6 +62,8 @@ void canvas_init(Camera* cam, CanvasInitConfig config) {
   glEnable(GL_DEPTH_TEST);
   glEnable(GL_ALPHA_TEST);
   glEnable(GL_BLEND);
+  glEnable(GL_CULL_FACE);
+
   glClearColor(0.0, 0.0, 0.0, 1);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -260,7 +262,7 @@ u32 canvas_create_texture(GLenum unit, char path[], TextureConfig config) {
 typedef struct {
   vec3 col;
   f64  amb, dif;
-  u8   s_dif, s_emt, lig, png;
+  u8   s_dif, s_emt, lig;
 } Material;
 
 void canvas_set_material(u32 shader, Material mat) {
@@ -270,7 +272,6 @@ void canvas_set_material(u32 shader, Material mat) {
   canvas_uni1i(shader, "MAT.S_DIF", mat.s_dif);
   canvas_uni1i(shader, "MAT.S_EMT", mat.s_emt);
   canvas_uni1i(shader, "MAT.LIG", mat.lig);
-  canvas_uni1i(shader, "MAT.PNG", mat.png);
 }
 
 // Animation

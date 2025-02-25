@@ -32,9 +32,8 @@ typedef char     c8;
 // Canvas
 
 typedef struct {
-  f32 fov, near, far;
+  f32 fov, near, far, pitch, yaw;
   vec3 pos, dir, rig;
-  f32 pitch, yaw;
   u16 width, height;
   GLFWwindow* window;
   mat4 view, proj;
@@ -59,7 +58,6 @@ void canvas_init(Camera* cam, CanvasInitConfig config) {
   cam->window = glfwCreateWindow(cam->width, cam->height, config.title, config.fullscreen ? glfwGetPrimaryMonitor() : NULL, NULL);
   glfwMakeContextCurrent(cam->window);
   gladLoadGLLoader((GLADloadproc) glfwGetProcAddress);
-  glViewport(0, 0, cam->width, cam->height);
   glEnable(GL_DEPTH_TEST);
   glEnable(GL_ALPHA_TEST);
   glEnable(GL_BLEND);
@@ -86,7 +84,7 @@ void generate_view_mat(Camera* cam, u32 shader) {
   glUniformMatrix4fv(UNI(shader, "VIEW"), 1, GL_FALSE, cam->view[0]);
 }
 
-void use_screen_space(Camera* cam, u32 shader, u8 use) {
+void set_screen_space(Camera* cam, u32 shader, u8 use) {
   if (!use) {
     glUniformMatrix4fv(UNI(shader, "PROJ"), 1, GL_FALSE, cam->proj[0]);
     glUniformMatrix4fv(UNI(shader, "VIEW"), 1, GL_FALSE, cam->view[0]);
@@ -119,13 +117,6 @@ u32 canvas_create_VAO() {
   glGenVertexArrays(1, &VAO);
   glBindVertexArray(VAO);
   return VAO;
-}
-
-u32 canvas_create_EBO() {
-  u32 EBO;
-  glGenBuffers(1, &EBO);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-  return EBO;
 }
 
 u32 canvas_create_FBO(u16 width, u16 height, GLenum min, GLenum mag) {

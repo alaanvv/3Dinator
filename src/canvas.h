@@ -14,6 +14,7 @@
 #define VEC2_COMPARE(v1, v2) (v1[0] == v2[0] && v1[1] == v2[1])
 #define VEC3_COMPARE(v1, v2) (v1[0] == v2[0] && v1[1] == v2[1] && v1[2] == v2[2])
 #define VERTEX_COPY(from, to) { for (u8 i_ = 0; i_ < 8; i_++) to[i_] = from[i_]; }
+#define VEC3(a, b, c) (vec3) { a, b, c }
 
 #define PI  3.14159
 #define TAU PI * 2
@@ -43,6 +44,10 @@ typedef float    f32;
 typedef double   f64;
 typedef char     c8;
 
+u32 canvas_create_VAO();
+u32 canvas_create_VBO(u32, const void*, GLenum);
+void canvas_vertex_attrib_pointer(u8, u8, GLenum, GLenum, u16, void*);
+
 // Canvas
 
 typedef struct {
@@ -58,6 +63,8 @@ typedef struct {
   u8 capture_mouse, fullscreen;
   f32 screen_size;
 } CanvasInitConfig;
+
+u32 HUD_VAO, HUD_VBO;
 
 void canvas_init(Camera* cam, CanvasInitConfig config) {
   glfwInit();
@@ -82,8 +89,8 @@ void canvas_init(Camera* cam, CanvasInitConfig config) {
 
   if (config.capture_mouse) glfwSetInputMode(cam->window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
-  glm_vec3_copy((vec3) { 0, 0, -1 }, cam->dir);
-  glm_vec3_copy((vec3) { 1, 0,  0 }, cam->rig);
+  glm_vec3_copy(VEC3(0, 0, -1), cam->dir);
+  glm_vec3_copy(VEC3(1, 0,  0), cam->rig);
 
   u32 tex_w, tex_b;
   glGenTextures(1, &tex_w);
@@ -95,6 +102,12 @@ void canvas_init(Camera* cam, CanvasInitConfig config) {
   glActiveTexture(GL_TEXTURE30);
   glBindTexture(GL_TEXTURE_2D, tex_b);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1, 1, 0, GL_RGB, GL_FLOAT, (f32[]) BLACK);
+
+  f32 square[6][5] =  { 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 1 };
+  HUD_VAO = canvas_create_VAO();
+  HUD_VBO = canvas_create_VBO(30 * sizeof(f32), square, GL_STATIC_DRAW);
+  canvas_vertex_attrib_pointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(f32), (void*) 0);
+  canvas_vertex_attrib_pointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(f32), (void*) (3 * sizeof(f32)));
 }
 
 void generate_proj_mat(Camera* cam, u32 shader) {
@@ -328,7 +341,7 @@ typedef struct {
 void model_parse(Model* model, const c8* path, u32* size, f32 scale) {
   vec3*   poss = malloc(sizeof(vec3));
   vec2*   texs = malloc(sizeof(vec2));
-  Vertex* vrts = malloc(sizeof(Vertex));
+  Vertex* square = malloc(sizeof(Vertex));
 
   u32 pos_i = 0;
   u32 tex_i = 0;
@@ -350,29 +363,29 @@ void model_parse(Model* model, const c8* path, u32* size, f32 scale) {
       char v_buf[4][256];
       u8 is_quad = 4 == sscanf(buffer, "f %s %s %s %s", v_buf[0], v_buf[1], v_buf[2], v_buf[3]);
 
-      vrts = realloc(vrts, sizeof(Vertex) * (vrt_i + (is_quad ? 6 : 3)));
+      square = realloc(square, sizeof(Vertex) * (vrt_i + (is_quad ? 6 : 3)));
 
       for (u8 i = 0; i < 3 + is_quad; i++) {
         u32 pi, ti;
         sscanf(v_buf[i], "%d/%d", &pi, &ti);
-        glm_vec3_copy(poss[pi], &vrts[vrt_i + i][0]);
-        glm_vec3_copy(texs[ti], &vrts[vrt_i + i][6]);
+        glm_vec3_copy(poss[pi], &square[vrt_i + i][0]);
+        glm_vec3_copy(texs[ti], &square[vrt_i + i][6]);
       }
 
       vec3 side_1, side_2, nrm;
-      glm_vec3_sub(vrts[vrt_i + 1], vrts[vrt_i + 0], side_1);
-      glm_vec3_sub(vrts[vrt_i + 2], vrts[vrt_i + 0], side_2);
+      glm_vec3_sub(square[vrt_i + 1], square[vrt_i + 0], side_1);
+      glm_vec3_sub(square[vrt_i + 2], square[vrt_i + 0], side_2);
       glm_vec3_cross(side_1, side_2, nrm);
       glm_vec3_normalize(nrm);
 
       for (u8 i = 0; i < 3 + is_quad; i++)
-        glm_vec3_copy(nrm, &vrts[vrt_i + i][3]);
+        glm_vec3_copy(nrm, &square[vrt_i + i][3]);
 
       vrt_i += 3 + is_quad;
       if (!is_quad) continue;
 
       for (u32 i = vrt_i; vrt_i < i + 2; vrt_i++)
-        VERTEX_COPY(vrts[vrt_i - 4 + (vrt_i - i)], vrts[vrt_i]);
+        VERTEX_COPY(square[vrt_i - 4 + (vrt_i - i)], square[vrt_i]);
     }
   }
 
@@ -381,7 +394,7 @@ void model_parse(Model* model, const c8* path, u32* size, f32 scale) {
   free(texs);
 
   *size = vrt_i;
-  model->vertexes = vrts;
+  model->vertexes = square;
 }
 
 Model* model_create(const c8* path, Material* material, f32 scale) {
@@ -501,4 +514,21 @@ void model_draw_spt_light(Model* model, SptLig lig, u32 shader) {
   canvas_unim4(shader, "MODEL", model->model[0]);
   glDrawArrays(GL_TRIANGLES, 0, model->size);
   canvas_uni1i(shader, "MAT.LIG", 0);
+}
+
+// HUD
+
+void hud_draw_rec(u32 shader, GLenum texture, vec3 color, i32 x, i32 y, i32 width, i32 height) {
+  mat4 model;
+  glm_mat4_identity(model);
+  glm_translate(model, VEC3(x, y, 0));
+  glm_scale(model,     VEC3(width, height, 1));
+
+  canvas_unim4(shader, "MODEL", *model);
+  canvas_uni1i(shader, "S_TEX", texture ? (texture - GL_TEXTURE0) : 29);
+  canvas_uni3f(shader, "COL",   color[0], color[1], color[2]);
+
+  glBindBuffer(GL_ARRAY_BUFFER, HUD_VBO);
+  glBindVertexArray(HUD_VAO);
+  glDrawArrays(GL_TRIANGLES, 0, 6);
 }

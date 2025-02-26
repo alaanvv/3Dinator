@@ -1,4 +1,3 @@
-// TODO HUD
 // TODO Font Rendering
 
 #include "canvas.h"
@@ -20,9 +19,9 @@ u32  shader, hud_shader;
 vec3 mouse;
 f32  fps;
 
-Material m_sphere = { DEEP_PURPLE,  0.3, 0.6 };
-Material m_cube   = { PASTEL_GREEN, 0.3, 0.6 };
-Material m_glass  = { WHITE,        0.3, 0.6, .tex = GL_TEXTURE0 };
+Material m_sphere = { DEEP_PURPLE, 0.3, 0.6 };
+Material m_cube   = { DEEP_ORANGE, 0.3, 0.6 };
+Material m_glass  = { WHITE,       0.3, 0.6, .tex = GL_TEXTURE0 };
 
 PntLig light = { WHITE, { 2 }, 1, 0.07, 0.017 };
 
@@ -35,7 +34,6 @@ int main() {
   Model* sphere = model_create("obj/sphere.obj", &m_sphere, 300);
   Model* glass  = model_create("obj/cube.obj",   &m_glass,  1);
   Model* cube   = model_create("obj/cube.obj",   &m_cube,   1);
-  Model* plane  = model_create("obj/plane.obj",  &m_cube,   1);
 
   // Texture
   canvas_create_texture(GL_TEXTURE0, "img/glass.ppm", TEXTURE_DEFAULT);
@@ -61,23 +59,20 @@ int main() {
     model_draw_pnt_light(sphere, light, shader);
 
     model_bind(sphere, shader);
-    glm_translate(sphere->model, (vec3) { sin(glfwGetTime()) * 8, 0, cos(glfwGetTime()) * 8 });
+    glm_translate(sphere->model, VEC3(sin(glfwGetTime()) * 8, 0, cos(glfwGetTime()) * 8));
     model_draw(sphere, shader);
 
     model_bind(cube, shader);
-    glm_translate(cube->model, (vec3) { sin(glfwGetTime() + PI) * 8, -0.5, cos(glfwGetTime() + PI) * 8 });
+    glm_translate(cube->model, VEC3(sin(glfwGetTime() + PI) * 8, -0.5, cos(glfwGetTime() + PI) * 8));
     model_draw(cube, shader);
 
     model_bind(glass, shader);
-    glm_translate(glass->model, (vec3) { sin(glfwGetTime() + PI) * 5, -0.5, cos(glfwGetTime() + PI) * 5 });
+    glm_translate(glass->model, VEC3(sin(glfwGetTime() + PI) * 5, -0.5, cos(glfwGetTime() + PI) * 5));
     model_draw(glass, shader);
 
     glUseProgram(hud_shader);
 
-    canvas_uni1i(hud_shader, "S_TEX", 1);
-    model_bind(plane, hud_shader);
-    glm_scale(plane->model, (vec3) {300, 300, 1.0});
-    model_draw(plane, hud_shader);
+    hud_draw_rec(hud_shader, GL_TEXTURE1, (vec3) WHITE, 0, 0, 300, 300);
 
     glUseProgram(shader);
 

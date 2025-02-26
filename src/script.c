@@ -1,5 +1,6 @@
 // TODO HUD
 // TODO Font Rendering
+// TODO Merge Light Materials into Light
 
 #include "canvas.h"
 
@@ -15,17 +16,17 @@ void handle_inputs(GLFWwindow*);
 
 // ---
 
-Camera cam = { FOV, 0.1, 100, .pos = { 0, 1, 0 } };
+Camera cam = { FOV, 0.01, 100 };
+u32  shader, hud_shader;
 vec3 mouse;
-u32  shader;
 f32  fps;
 
-Material m_light  = { { 1.00, 1.00, 1.00 }, 0.0, 0.0, 0, 0, 1 };
-Material m_sphere = { { 1.00, 1.00, 1.00 }, 0.1, 0.5, 0, 1, 0 };
-Material m_cube   = { { 1.00, 1.00, 1.00 }, 0.1, 0.5, 0, 1, 0 };
-Material m_glass  = { { 1.00, 1.00, 1.00 }, 0.1, 0.5, 2, 1, 0 };
+Material m_light  = { { 1.0, 0.5, 0.5 }, 0.0, 0.0, 0, 0, 1 };
+Material m_sphere = { { 1.0, 1.0, 1.0 }, 0.1, 0.5, 0, 1, 0 };
+Material m_cube   = { { 1.0, 1.0, 1.0 }, 1.0, 0.0, 0, 1, 0 };
+Material m_glass  = { { 1.0, 1.0, 1.0 }, 0.1, 0.5, 2, 1, 0 };
 
-PntLig light = { { 1, 1, 1 }, { 0.5, 0.5, 0.5 }, 1, 0.07, 0.017 };
+PntLig light = { { 1, 0.5, 0.5 }, { 0.5, 0.5, 0.5 }, 1, 0.07, 0.017 };
 
 // ---
 
@@ -33,32 +34,31 @@ int main() {
   canvas_init(&cam, (CanvasInitConfig) { "Room", 1, FULLSCREEN, SCREEN_SIZE });
 
   Model* sphere = model_create("obj/sphere.obj", &m_sphere, 100);
-  Model* cube   = model_create("obj/cube.obj", &m_cube, 1);
-  Model* glass  = model_create("obj/cube.obj", &m_glass, 1);
+  Model* glass  = model_create("obj/cube.obj",   &m_glass, 1);
+  Model* cube   = model_create("obj/cube.obj",   &m_cube, 1);
+  Model* plane  = model_create("obj/plane.obj",  &m_cube, 1);
 
   u32 lowres_fbo = canvas_create_FBO(cam.width * UPSCALE, cam.height * UPSCALE, GL_NEAREST, GL_NEAREST);
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
   canvas_create_texture(GL_TEXTURE0, "img/w.ppm",     TEXTURE_DEFAULT);
   canvas_create_texture(GL_TEXTURE1, "img/b.ppm",     TEXTURE_DEFAULT);
+  canvas_create_texture(GL_TEXTURE3, "img/hand.ppm",  TEXTURE_DEFAULT);
   canvas_create_texture(GL_TEXTURE2, "img/glass.ppm", TEXTURE_DEFAULT);
 
-  shader = shader_create_program("shd/obj.v", "shd/obj.f");
-
+  shader     = shader_create_program("shd/obj.v", "shd/obj.f");
   generate_proj_mat(&cam, shader);
   generate_view_mat(&cam, shader);
-
   canvas_set_pnt_lig(shader, light, 0);
+
+  hud_shader = shader_create_program("shd/hud.v", "shd/hud.f");
+  generate_ortho_mat(&cam, hud_shader);
 
   while (!glfwWindowShouldClose(cam.window)) {
     update_fps(&fps);
 
     model_bind(sphere, shader);
     canvas_set_material(shader, m_light);
-    model_draw(sphere, shader);
-
-    model_bind(sphere, shader);
-    glm_translate(sphere->model, (vec3) { sin(glfwGetTime()) * 5, 0, cos(glfwGetTime()) * 5 });
     model_draw(sphere, shader);
 
     model_bind(cube, shader);
@@ -68,6 +68,15 @@ int main() {
     model_bind(glass, shader);
     glm_translate(glass->model, (vec3) { sin(glfwGetTime() + PI) * 5, -0.5, cos(glfwGetTime() + PI) * 5 });
     model_draw(glass, shader);
+
+    glUseProgram(hud_shader);
+
+    canvas_uni1i(hud_shader, "S_TEX", 3);
+    model_bind(plane, hud_shader);
+    glm_scale(plane->model, (vec3) {300, 300, 1.0});
+    model_draw(plane, hud_shader);
+
+    glUseProgram(shader);
 
     glBlitNamedFramebuffer(0, lowres_fbo, 0, 0, cam.width, cam.height, 0, 0, cam.width * UPSCALE, cam.height * UPSCALE, GL_COLOR_BUFFER_BIT, GL_NEAREST);
     glBlitNamedFramebuffer(lowres_fbo, 0, 0, 0, cam.width * UPSCALE, cam.height * UPSCALE, 0, 0, cam.width, cam.height, GL_COLOR_BUFFER_BIT, GL_NEAREST);

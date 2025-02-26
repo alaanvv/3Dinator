@@ -98,7 +98,6 @@ void main() {
     discard;
   }
 
-
   vec3 _color = vec3(0);
 
   if (MAT.LIG == 0) {

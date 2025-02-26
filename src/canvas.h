@@ -37,7 +37,7 @@ typedef struct {
   vec3 pos, dir, rig;
   u16 width, height;
   GLFWwindow* window;
-  mat4 view, proj;
+  mat4 view, proj, ortho;
 } Camera;
 
 typedef struct {
@@ -87,16 +87,9 @@ void generate_view_mat(Camera* cam, u32 shader) {
   glUniformMatrix4fv(UNI(shader, "VIEW"), 1, GL_FALSE, cam->view[0]);
 }
 
-void set_screen_space(Camera* cam, u32 shader, u8 use) {
-  if (!use) {
-    glUniformMatrix4fv(UNI(shader, "PROJ"), 1, GL_FALSE, cam->proj[0]);
-    glUniformMatrix4fv(UNI(shader, "VIEW"), 1, GL_FALSE, cam->view[0]);
-    return;
-  }
-  mat4 blank;
-  glm_mat4_identity(blank);
-  glUniformMatrix4fv(UNI(shader, "PROJ"), 1, GL_FALSE, blank[0]);
-  glUniformMatrix4fv(UNI(shader, "VIEW"), 1, GL_FALSE, blank[0]);
+void generate_ortho_mat(Camera* cam, u32 shader) {
+  glm_ortho(0, cam->width, 0, cam->height, -1.0, 1.0, cam->ortho);
+  glUniformMatrix4fv(UNI(shader, "PROJ"), 1, GL_FALSE, cam->ortho[0]);
 }
 
 void update_fps(f32* fps) {

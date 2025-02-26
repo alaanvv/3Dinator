@@ -147,6 +147,7 @@ void handle_inputs(GLFWwindow* window) {
   glm_vec3_copy((vec3) { cos(cam.yaw) * cos(cam.pitch), 0, sin(cam.yaw) * cos(cam.pitch) }, cam.rig);
   glm_normalize(cam.rig);
 
+  glUseProgram(shader);
   generate_view_mat(&cam, shader);
   mouse[0] = x;
   mouse[1] = y;

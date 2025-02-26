@@ -71,6 +71,17 @@ void canvas_init(Camera* cam, CanvasInitConfig config) {
 
   glm_vec3_copy((vec3) { 0, 0, -1 }, cam->dir);
   glm_vec3_copy((vec3) { 1, 0,  0 }, cam->rig);
+
+  u32 tex_w, tex_b;
+  glGenTextures(1, &tex_w);
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, tex_w);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1, 1, 0, GL_RGB, GL_FLOAT, (f32[]) { 1, 1, 1 });
+
+  glGenTextures(1, &tex_b);
+  glActiveTexture(GL_TEXTURE1);
+  glBindTexture(GL_TEXTURE_2D, tex_b);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1, 1, 0, GL_RGB, GL_FLOAT, (f32[]) { 0, 0, 0 });
 }
 
 void generate_proj_mat(Camera* cam, u32 shader) {
@@ -122,6 +133,7 @@ u32 canvas_create_FBO(u16 width, u16 height, GLenum min, GLenum mag) {
 
   u32 REN_TEX;
   glGenTextures(1, &REN_TEX);
+  glActiveTexture(GL_TEXTURE16);
   glBindTexture(GL_TEXTURE_2D, REN_TEX);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, min);

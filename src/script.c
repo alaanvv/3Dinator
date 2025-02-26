@@ -23,7 +23,7 @@ f32  fps;
 
 Material m_light  = { { 1.0, 0.5, 0.5 }, 0.0, 0.0, 0, 0, 1 };
 Material m_sphere = { { 1.0, 1.0, 1.0 }, 0.1, 0.5, 0, 1, 0 };
-Material m_cube   = { { 1.0, 1.0, 1.0 }, 1.0, 0.0, 0, 1, 0 };
+Material m_cube   = { { 1.0, 1.0, 1.0 }, 0.1, 0.5, 0, 1, 0 };
 Material m_glass  = { { 1.0, 1.0, 1.0 }, 0.1, 0.5, 2, 1, 0 };
 
 PntLig light = { { 1, 0.5, 0.5 }, { 0.5, 0.5, 0.5 }, 1, 0.07, 0.017 };
@@ -41,8 +41,6 @@ int main() {
   u32 lowres_fbo = canvas_create_FBO(cam.width * UPSCALE, cam.height * UPSCALE, GL_NEAREST, GL_NEAREST);
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-  canvas_create_texture(GL_TEXTURE0, "img/w.ppm",     TEXTURE_DEFAULT);
-  canvas_create_texture(GL_TEXTURE1, "img/b.ppm",     TEXTURE_DEFAULT);
   canvas_create_texture(GL_TEXTURE3, "img/hand.ppm",  TEXTURE_DEFAULT);
   canvas_create_texture(GL_TEXTURE2, "img/glass.ppm", TEXTURE_DEFAULT);
 

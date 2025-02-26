@@ -1,32 +1,34 @@
 #include "canvas.h"
 
+#define CAMERA_LOCK PI2 * 0.9
+#define SENSITIVITY 0.001
 #define SCREEN_SIZE 0.5
 #define FULLSCREEN 0
-#define SPEED 3
-#define UPSCALE 1
-#define SENSITIVITY 0.001
-#define CAMERA_LOCK PI2 * 0.99
+#define UPSCALE 0.2
 #define FOV PI4
+#define SPEED 3
 
 void handle_inputs(GLFWwindow*);
 
 // ---
 
 Camera cam = { FOV, 0.01, 100 };
+f32  fps, _fps, last_fps_tick;
 u32  shader, hud_shader;
 vec3 mouse;
-f32  fps;
-
-Material m_sphere = { DEEP_PURPLE, 0.3, 0.6 };
-Material m_cube   = { DEEP_ORANGE, 0.3, 0.6 };
-Material m_glass  = { WHITE,       0.3, 0.6, .tex = GL_TEXTURE0 };
-
-PntLig light = { WHITE, { 2 }, 1, 0.07, 0.017 };
 
 // ---
 
 int main() {
-  canvas_init(&cam, (CanvasInitConfig) { "Room", 1, FULLSCREEN, SCREEN_SIZE });
+  canvas_init(&cam, (CanvasInitConfig) { "FONT", 1, FULLSCREEN, SCREEN_SIZE });
+
+  // Material
+  Material m_sphere = { DEEP_PURPLE, 0.3, 0.6 };
+  Material m_cube   = { DEEP_ORANGE, 0.3, 0.6 };
+  Material m_glass  = { WHITE,       0.3, 0.6, .tex = GL_TEXTURE0 };
+
+  // Light
+  PntLig light = { WHITE, { 2 }, 1, 0.07, 0.017 };
 
   // Model
   Model* sphere = model_create("obj/sphere.obj", &m_sphere, 300);
@@ -39,7 +41,7 @@ int main() {
   canvas_create_texture(GL_TEXTURE2, "img/font.ppm",  TEXTURE_DEFAULT);
 
   // Font
-  Font font = { GL_TEXTURE2, 60, 20, 3, 7.0 / 5 };
+  Font font = { GL_TEXTURE2, 60, 20, 5, 7.0 / 5 };
 
   // Shader
   shader = shader_create_program("shd/obj.v", "shd/obj.f");
@@ -55,7 +57,8 @@ int main() {
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
   while (!glfwWindowShouldClose(cam.window)) {
-    update_fps(&fps);
+    // 3D Drawing
+    glUseProgram(shader);
 
     model_bind(sphere, shader);
     model_draw_pnt_light(sphere, light, shader);
@@ -72,21 +75,33 @@ int main() {
     glm_translate(glass->model, VEC3(sin(glfwGetTime() + PI) * 5, -0.5, cos(glfwGetTime() + PI) * 5));
     model_draw(glass, shader);
 
+    // HUD Drawing
     glUseProgram(hud_shader);
 
     hud_draw_rec(hud_shader, GL_TEXTURE1, (vec3) WHITE, 0, 0, 300, 400);
-    hud_draw_text(hud_shader, "hello world", 500, 20, font, (vec3) WHITE);
 
-    glUseProgram(shader);
-
+    // Lowres
     glBlitNamedFramebuffer(0, lowres_fbo, 0, 0, cam.width, cam.height, 0, 0, cam.width * UPSCALE, cam.height * UPSCALE, GL_COLOR_BUFFER_BIT, GL_NEAREST);
     glBlitNamedFramebuffer(lowres_fbo, 0, 0, 0, cam.width * UPSCALE, cam.height * UPSCALE, 0, 0, cam.width, cam.height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
 
+    // Draw Text
+    c8 buffer[10];
+    sprintf(buffer, "%d FPS", (i32) _fps);
+    hud_draw_text(hud_shader, buffer, 10, cam.height - font.size * font.ratio - 10, font, (vec3) WHITE);
+    hud_draw_text(hud_shader, "hello world", 500, 20, font, (vec3) WHITE);
+
+    // Finish
     glfwSwapBuffers(cam.window);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glfwPollEvents();
     handle_inputs(cam.window);
+
+    if (glfwGetTime() - last_fps_tick > 0.1) {
+      last_fps_tick = glfwGetTime();
+      _fps = fps;
+    }
+    update_fps(&fps);
   }
 
   glfwTerminate();
@@ -110,6 +125,7 @@ void handle_inputs(GLFWwindow* window) {
     glm_vec3_add(cam.pos, lateral,  cam.pos);
     glm_vec3_add(cam.pos, frontal,  cam.pos);
     glm_vec3_add(cam.pos, vertical, cam.pos);
+    glUseProgram(shader);
     generate_view_mat(&cam, shader);
   };
 

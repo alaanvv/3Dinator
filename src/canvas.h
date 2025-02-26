@@ -547,6 +547,8 @@ void hud_draw_text(u32 shader, char* text, i32 x, i32 y, Font font, vec3 color) 
   for (u8 i = 0; text[i]; i++) {
     c8 c = text[i];
     if      (c == ' ')             c  =  59;
+    else if (c == '0')             c  =  35;
+    else if (c >= '1' && c <= '9') c  = c - '1' + 26;
     else if (c >= 'a' && c <= 'z') c -= 'a';
     else if (c >= 'A' && c <= 'Z') c -= 'A';
     canvas_uni1i(shader, "TILE", c);

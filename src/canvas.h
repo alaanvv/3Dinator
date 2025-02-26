@@ -27,7 +27,11 @@
 #define PASTEL_GREEN  { 0.60, 0.98, 0.60 }
 #define PASTEL_YELLOW { 1.00, 1.00, 0.60 }
 #define PASTEL_PURPLE { 0.80, 0.70, 1.00 }
-
+#define DEEP_RED      { 0.60, 0.00, 0.00 }
+#define DEEP_BLUE     { 0.00, 0.00, 0.50 }
+#define DEEP_GREEN    { 0.00, 0.50, 0.00 }
+#define DEEP_PURPLE   { 0.40, 0.00, 0.60 }
+#define DEEP_ORANGE   { 1.00, 0.27, 0.00 }
 
 typedef uint8_t  u8;
 typedef uint16_t u16;
@@ -277,7 +281,6 @@ typedef struct {
   vec3 col;
   f64  amb, dif;
   GLenum tex, emt;
-  u8 lig;
 } Material;
 
 void canvas_set_material(u32 shader, Material mat) {
@@ -286,7 +289,6 @@ void canvas_set_material(u32 shader, Material mat) {
   canvas_uni1f(shader, "MAT.DIF", mat.dif);
   canvas_uni1i(shader, "MAT.S_DIF", mat.tex >= GL_TEXTURE0 ? (mat.tex - GL_TEXTURE0) : 29);
   canvas_uni1i(shader, "MAT.S_EMT", mat.emt >= GL_TEXTURE0 ? (mat.emt - GL_TEXTURE0) : 30);
-  canvas_uni1i(shader, "MAT.LIG", mat.lig);
 }
 
 // Animation
@@ -467,4 +469,36 @@ void canvas_set_spt_lig(u32 shader, SptLig spt_lig, u32 i) {
   canvas_uni1f(shader, uniform, spt_lig.inn);
   sprintf(uniform, "SPT_LIGS[%i].OUT", i);
   canvas_uni1f(shader, uniform, spt_lig.out);
+}
+
+void model_draw_dir_light(Model* model, DirLig lig, u32 shader) {
+  canvas_uni3f(shader, "MAT.COL", lig.col[0], lig.col[1], lig.col[2]);
+  canvas_uni1i(shader, "MAT.LIG", 1);
+  glBindBuffer(GL_ARRAY_BUFFER, model->VBO);
+  glBindVertexArray(model->VAO);
+  canvas_unim4(shader, "MODEL", model->model[0]);
+  glDrawArrays(GL_TRIANGLES, 0, model->size);
+  canvas_uni1i(shader, "MAT.LIG", 0);
+}
+
+void model_draw_pnt_light(Model* model, PntLig lig, u32 shader) {
+  glm_translate(model->model, lig.pos);
+  canvas_uni3f(shader, "MAT.COL", lig.col[0], lig.col[1], lig.col[2]);
+  canvas_uni1i(shader, "MAT.LIG", 1);
+  glBindBuffer(GL_ARRAY_BUFFER, model->VBO);
+  glBindVertexArray(model->VAO);
+  canvas_unim4(shader, "MODEL", model->model[0]);
+  glDrawArrays(GL_TRIANGLES, 0, model->size);
+  canvas_uni1i(shader, "MAT.LIG", 0);
+}
+
+void model_draw_spt_light(Model* model, SptLig lig, u32 shader) {
+  glm_translate(model->model, lig.pos);
+  canvas_uni3f(shader, "MAT.COL", lig.col[0], lig.col[1], lig.col[2]);
+  canvas_uni1i(shader, "MAT.LIG", 1);
+  glBindBuffer(GL_ARRAY_BUFFER, model->VBO);
+  glBindVertexArray(model->VAO);
+  canvas_unim4(shader, "MODEL", model->model[0]);
+  glDrawArrays(GL_TRIANGLES, 0, model->size);
+  canvas_uni1i(shader, "MAT.LIG", 0);
 }

@@ -20,30 +20,29 @@ u32  shader, hud_shader;
 vec3 mouse;
 f32  fps;
 
-Material m_light  = { WHITE,        .lig = 1 };
-Material m_sphere = { PASTEL_PINK,  0.1, 0.5 };
-Material m_cube   = { PASTEL_GREEN, 0.1, 0.5 };
-Material m_glass  = { WHITE,        0.1, 0.5, .tex = GL_TEXTURE0 };
+Material m_sphere = { DEEP_PURPLE,  0.3, 0.6 };
+Material m_cube   = { PASTEL_GREEN, 0.3, 0.6 };
+Material m_glass  = { WHITE,        0.3, 0.6, .tex = GL_TEXTURE0 };
 
-PntLig light = { WHITE, { 0.0, 0.0, 0.0 }, 1, 0.07, 0.017 };
+PntLig light = { WHITE, { 2 }, 1, 0.07, 0.017 };
 
 // ---
 
 int main() {
   canvas_init(&cam, (CanvasInitConfig) { "Room", 1, FULLSCREEN, SCREEN_SIZE });
 
-  Model* sphere = model_create("obj/sphere.obj", &m_sphere, 100);
-  Model* glass  = model_create("obj/cube.obj",   &m_glass, 1);
-  Model* cube   = model_create("obj/cube.obj",   &m_cube, 1);
-  Model* plane  = model_create("obj/plane.obj",  &m_cube, 1);
+  // Model
+  Model* sphere = model_create("obj/sphere.obj", &m_sphere, 300);
+  Model* glass  = model_create("obj/cube.obj",   &m_glass,  1);
+  Model* cube   = model_create("obj/cube.obj",   &m_cube,   1);
+  Model* plane  = model_create("obj/plane.obj",  &m_cube,   1);
 
-  u32 lowres_fbo = canvas_create_FBO(cam.width * UPSCALE, cam.height * UPSCALE, GL_NEAREST, GL_NEAREST);
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
+  // Texture
   canvas_create_texture(GL_TEXTURE0, "img/glass.ppm", TEXTURE_DEFAULT);
   canvas_create_texture(GL_TEXTURE1, "img/hand.ppm",  TEXTURE_DEFAULT);
 
-  shader     = shader_create_program("shd/obj.v", "shd/obj.f");
+  // Shader
+  shader = shader_create_program("shd/obj.v", "shd/obj.f");
   generate_proj_mat(&cam, shader);
   generate_view_mat(&cam, shader);
   canvas_set_pnt_lig(shader, light, 0);
@@ -51,12 +50,15 @@ int main() {
   hud_shader = shader_create_program("shd/hud.v", "shd/hud.f");
   generate_ortho_mat(&cam, hud_shader);
 
+  // FBO
+  u32 lowres_fbo = canvas_create_FBO(cam.width * UPSCALE, cam.height * UPSCALE, GL_NEAREST, GL_NEAREST);
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
   while (!glfwWindowShouldClose(cam.window)) {
     update_fps(&fps);
 
     model_bind(sphere, shader);
-    canvas_set_material(shader, m_light);
-    model_draw(sphere, shader);
+    model_draw_pnt_light(sphere, light, shader);
 
     model_bind(sphere, shader);
     glm_translate(sphere->model, (vec3) { sin(glfwGetTime()) * 8, 0, cos(glfwGetTime()) * 8 });
@@ -82,10 +84,11 @@ int main() {
     glBlitNamedFramebuffer(0, lowres_fbo, 0, 0, cam.width, cam.height, 0, 0, cam.width * UPSCALE, cam.height * UPSCALE, GL_COLOR_BUFFER_BIT, GL_NEAREST);
     glBlitNamedFramebuffer(lowres_fbo, 0, 0, 0, cam.width * UPSCALE, cam.height * UPSCALE, 0, 0, cam.width, cam.height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
 
-    glfwPollEvents();
-    handle_inputs(cam.window);
     glfwSwapBuffers(cam.window);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    glfwPollEvents();
+    handle_inputs(cam.window);
   }
 
   glfwTerminate();

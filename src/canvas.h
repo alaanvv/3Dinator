@@ -532,3 +532,27 @@ void hud_draw_rec(u32 shader, GLenum texture, vec3 color, i32 x, i32 y, i32 widt
   glBindVertexArray(HUD_VAO);
   glDrawArrays(GL_TRIANGLES, 0, 6);
 }
+
+// Text
+
+typedef struct {
+  u32 texture, tile_amount, size;
+  i16 spacing;
+  f32 ratio;
+} Font;
+
+void hud_draw_text(u32 shader, char* text, i32 x, i32 y, Font font, vec3 color) {
+  canvas_uni1i(shader, "TILE_AMOUNT", font.tile_amount);
+
+  for (u8 i = 0; text[i]; i++) {
+    c8 c = text[i];
+    if      (c == ' ')             c  =  59;
+    else if (c >= 'a' && c <= 'z') c -= 'a';
+    else if (c >= 'A' && c <= 'Z') c -= 'A';
+    canvas_uni1i(shader, "TILE", c);
+    hud_draw_rec(shader, font.texture, color, x + (font.size + font.spacing) * i, y, font.size, font.size * font.ratio);
+  }
+
+  canvas_uni1i(shader, "TILE_AMOUNT", 0);
+  canvas_uni1i(shader, "TILE", 0);
+}

@@ -1,11 +1,9 @@
-// TODO Font Rendering
-
 #include "canvas.h"
 
 #define SCREEN_SIZE 0.5
 #define FULLSCREEN 0
 #define SPEED 3
-#define UPSCALE 0.2
+#define UPSCALE 1
 #define SENSITIVITY 0.001
 #define CAMERA_LOCK PI2 * 0.99
 #define FOV PI4
@@ -38,6 +36,10 @@ int main() {
   // Texture
   canvas_create_texture(GL_TEXTURE0, "img/glass.ppm", TEXTURE_DEFAULT);
   canvas_create_texture(GL_TEXTURE1, "img/hand.ppm",  TEXTURE_DEFAULT);
+  canvas_create_texture(GL_TEXTURE2, "img/font.ppm",  TEXTURE_DEFAULT);
+
+  // Font
+  Font font = { GL_TEXTURE2, 60, 20, 3, 7.0 / 5 };
 
   // Shader
   shader = shader_create_program("shd/obj.v", "shd/obj.f");
@@ -72,7 +74,8 @@ int main() {
 
     glUseProgram(hud_shader);
 
-    hud_draw_rec(hud_shader, GL_TEXTURE1, (vec3) WHITE, 0, 0, 300, 300);
+    hud_draw_rec(hud_shader, GL_TEXTURE1, (vec3) WHITE, 0, 0, 300, 400);
+    hud_draw_text(hud_shader, "hello world", 500, 20, font, (vec3) WHITE);
 
     glUseProgram(shader);
 

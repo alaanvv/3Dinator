@@ -20,6 +20,15 @@
 #define PI2 PI / 2
 #define PI4 PI / 4
 
+#define WHITE         { 1.00, 1.00, 1.00 }
+#define BLACK         { 0.00, 0.00, 0.00 }
+#define PASTEL_BLUE   { 0.69, 0.87, 1.00 }
+#define PASTEL_PINK   { 1.00, 0.75, 0.79 }
+#define PASTEL_GREEN  { 0.60, 0.98, 0.60 }
+#define PASTEL_YELLOW { 1.00, 1.00, 0.60 }
+#define PASTEL_PURPLE { 0.80, 0.70, 1.00 }
+
+
 typedef uint8_t  u8;
 typedef uint16_t u16;
 typedef uint32_t u32;
@@ -74,14 +83,14 @@ void canvas_init(Camera* cam, CanvasInitConfig config) {
 
   u32 tex_w, tex_b;
   glGenTextures(1, &tex_w);
-  glActiveTexture(GL_TEXTURE0);
+  glActiveTexture(GL_TEXTURE29);
   glBindTexture(GL_TEXTURE_2D, tex_w);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1, 1, 0, GL_RGB, GL_FLOAT, (f32[]) { 1, 1, 1 });
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1, 1, 0, GL_RGB, GL_FLOAT, (f32[]) WHITE);
 
   glGenTextures(1, &tex_b);
-  glActiveTexture(GL_TEXTURE1);
+  glActiveTexture(GL_TEXTURE30);
   glBindTexture(GL_TEXTURE_2D, tex_b);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1, 1, 0, GL_RGB, GL_FLOAT, (f32[]) { 0, 0, 0 });
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1, 1, 0, GL_RGB, GL_FLOAT, (f32[]) BLACK);
 }
 
 void generate_proj_mat(Camera* cam, u32 shader) {
@@ -133,7 +142,7 @@ u32 canvas_create_FBO(u16 width, u16 height, GLenum min, GLenum mag) {
 
   u32 REN_TEX;
   glGenTextures(1, &REN_TEX);
-  glActiveTexture(GL_TEXTURE16);
+  glActiveTexture(GL_TEXTURE31);
   glBindTexture(GL_TEXTURE_2D, REN_TEX);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, min);
@@ -267,15 +276,16 @@ u32 canvas_create_texture(GLenum unit, char path[], TextureConfig config) {
 typedef struct {
   vec3 col;
   f64  amb, dif;
-  u8   s_dif, s_emt, lig;
+  GLenum tex, emt;
+  u8 lig;
 } Material;
 
 void canvas_set_material(u32 shader, Material mat) {
   canvas_uni3f(shader, "MAT.COL", mat.col[0], mat.col[1], mat.col[2]);
   canvas_uni1f(shader, "MAT.AMB", mat.amb);
   canvas_uni1f(shader, "MAT.DIF", mat.dif);
-  canvas_uni1i(shader, "MAT.S_DIF", mat.s_dif);
-  canvas_uni1i(shader, "MAT.S_EMT", mat.s_emt);
+  canvas_uni1i(shader, "MAT.S_DIF", mat.tex >= GL_TEXTURE0 ? (mat.tex - GL_TEXTURE0) : 29);
+  canvas_uni1i(shader, "MAT.S_EMT", mat.emt >= GL_TEXTURE0 ? (mat.emt - GL_TEXTURE0) : 30);
   canvas_uni1i(shader, "MAT.LIG", mat.lig);
 }
 

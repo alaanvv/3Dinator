@@ -1,6 +1,5 @@
 // TODO HUD
 // TODO Font Rendering
-// TODO Merge Light Materials into Light
 
 #include "canvas.h"
 
@@ -21,12 +20,12 @@ u32  shader, hud_shader;
 vec3 mouse;
 f32  fps;
 
-Material m_light  = { { 1.0, 0.5, 0.5 }, 0.0, 0.0, 0, 0, 1 };
-Material m_sphere = { { 1.0, 1.0, 1.0 }, 0.1, 0.5, 0, 1, 0 };
-Material m_cube   = { { 1.0, 1.0, 1.0 }, 0.1, 0.5, 0, 1, 0 };
-Material m_glass  = { { 1.0, 1.0, 1.0 }, 0.1, 0.5, 2, 1, 0 };
+Material m_light  = { WHITE,        .lig = 1 };
+Material m_sphere = { PASTEL_PINK,  0.1, 0.5 };
+Material m_cube   = { PASTEL_GREEN, 0.1, 0.5 };
+Material m_glass  = { WHITE,        0.1, 0.5, .tex = GL_TEXTURE0 };
 
-PntLig light = { { 1, 0.5, 0.5 }, { 0.5, 0.5, 0.5 }, 1, 0.07, 0.017 };
+PntLig light = { WHITE, { 0.0, 0.0, 0.0 }, 1, 0.07, 0.017 };
 
 // ---
 
@@ -41,8 +40,8 @@ int main() {
   u32 lowres_fbo = canvas_create_FBO(cam.width * UPSCALE, cam.height * UPSCALE, GL_NEAREST, GL_NEAREST);
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-  canvas_create_texture(GL_TEXTURE3, "img/hand.ppm",  TEXTURE_DEFAULT);
-  canvas_create_texture(GL_TEXTURE2, "img/glass.ppm", TEXTURE_DEFAULT);
+  canvas_create_texture(GL_TEXTURE0, "img/glass.ppm", TEXTURE_DEFAULT);
+  canvas_create_texture(GL_TEXTURE1, "img/hand.ppm",  TEXTURE_DEFAULT);
 
   shader     = shader_create_program("shd/obj.v", "shd/obj.f");
   generate_proj_mat(&cam, shader);
@@ -59,6 +58,10 @@ int main() {
     canvas_set_material(shader, m_light);
     model_draw(sphere, shader);
 
+    model_bind(sphere, shader);
+    glm_translate(sphere->model, (vec3) { sin(glfwGetTime()) * 8, 0, cos(glfwGetTime()) * 8 });
+    model_draw(sphere, shader);
+
     model_bind(cube, shader);
     glm_translate(cube->model, (vec3) { sin(glfwGetTime() + PI) * 8, -0.5, cos(glfwGetTime() + PI) * 8 });
     model_draw(cube, shader);
@@ -69,7 +72,7 @@ int main() {
 
     glUseProgram(hud_shader);
 
-    canvas_uni1i(hud_shader, "S_TEX", 3);
+    canvas_uni1i(hud_shader, "S_TEX", 1);
     model_bind(plane, hud_shader);
     glm_scale(plane->model, (vec3) {300, 300, 1.0});
     model_draw(plane, hud_shader);

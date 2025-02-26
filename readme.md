@@ -7,7 +7,7 @@
   A 3D engine made completely from scratch
   using only **OpenGL and cglm**
 
-  <img width='50%' src='https://github.com/alaanvv/Image-Database/blob/main/3Dinator/font.png?raw=true'>
+  <img width='90%' src='https://github.com/alaanvv/Image-Database/blob/main/3Dinator/font.png?raw=true'>
 </div>
 
 ---

@@ -64,7 +64,7 @@ typedef struct {
   f32 screen_size;
 } CanvasInitConfig;
 
-u32 HUD_VAO, HUD_VBO;
+u32 PLANE_VAO, PLANE_VBO;
 
 void canvas_init(Camera* cam, CanvasInitConfig config) {
   glfwInit();
@@ -104,10 +104,10 @@ void canvas_init(Camera* cam, CanvasInitConfig config) {
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1, 1, 0, GL_RGB, GL_FLOAT, (f32[]) BLACK);
 
   f32 square[6][5] =  { 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 1 };
-  HUD_VAO = canvas_create_VAO();
-  HUD_VBO = canvas_create_VBO(30 * sizeof(f32), square, GL_STATIC_DRAW);
+  PLANE_VAO = canvas_create_VAO();
+  PLANE_VBO = canvas_create_VBO(30 * sizeof(f32), square, GL_STATIC_DRAW);
   canvas_vertex_attrib_pointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(f32), (void*) 0);
-  canvas_vertex_attrib_pointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(f32), (void*) (3 * sizeof(f32)));
+  canvas_vertex_attrib_pointer(2, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(f32), (void*) (3 * sizeof(f32)));
 }
 
 void generate_proj_mat(Camera* cam, u32 shader) {
@@ -294,6 +294,7 @@ typedef struct {
   vec3 col;
   f64  amb, dif;
   GLenum tex, emt;
+  u8 lig;
 } Material;
 
 void canvas_set_material(u32 shader, Material mat) {
@@ -302,6 +303,7 @@ void canvas_set_material(u32 shader, Material mat) {
   canvas_uni1f(shader, "MAT.DIF", mat.dif);
   canvas_uni1i(shader, "MAT.S_DIF", mat.tex >= GL_TEXTURE0 ? (mat.tex - GL_TEXTURE0) : 29);
   canvas_uni1i(shader, "MAT.S_EMT", mat.emt >= GL_TEXTURE0 ? (mat.emt - GL_TEXTURE0) : 30);
+  canvas_uni1i(shader, "MAT.LIG", mat.lig);
 }
 
 // Animation
@@ -491,7 +493,6 @@ void model_draw_dir_light(Model* model, DirLig lig, u32 shader) {
   glBindVertexArray(model->VAO);
   canvas_unim4(shader, "MODEL", model->model[0]);
   glDrawArrays(GL_TRIANGLES, 0, model->size);
-  canvas_uni1i(shader, "MAT.LIG", 0);
 }
 
 void model_draw_pnt_light(Model* model, PntLig lig, u32 shader) {
@@ -502,7 +503,6 @@ void model_draw_pnt_light(Model* model, PntLig lig, u32 shader) {
   glBindVertexArray(model->VAO);
   canvas_unim4(shader, "MODEL", model->model[0]);
   glDrawArrays(GL_TRIANGLES, 0, model->size);
-  canvas_uni1i(shader, "MAT.LIG", 0);
 }
 
 void model_draw_spt_light(Model* model, SptLig lig, u32 shader) {
@@ -513,7 +513,6 @@ void model_draw_spt_light(Model* model, SptLig lig, u32 shader) {
   glBindVertexArray(model->VAO);
   canvas_unim4(shader, "MODEL", model->model[0]);
   glDrawArrays(GL_TRIANGLES, 0, model->size);
-  canvas_uni1i(shader, "MAT.LIG", 0);
 }
 
 // HUD
@@ -528,8 +527,8 @@ void hud_draw_rec(u32 shader, GLenum texture, vec3 color, i32 x, i32 y, i32 widt
   canvas_uni1i(shader, "S_TEX", texture ? (texture - GL_TEXTURE0) : 29);
   canvas_uni3f(shader, "COL",   color[0], color[1], color[2]);
 
-  glBindBuffer(GL_ARRAY_BUFFER, HUD_VBO);
-  glBindVertexArray(HUD_VAO);
+  glBindBuffer(GL_ARRAY_BUFFER, PLANE_VBO);
+  glBindVertexArray(PLANE_VAO);
   glDrawArrays(GL_TRIANGLES, 0, 6);
 }
 
@@ -541,20 +540,57 @@ typedef struct {
   f32 ratio;
 } Font;
 
+u8 _map_font(u8 c) {
+  if (c == ' ')             return 59;
+  if (c == '0')             return 35;
+  if (c >= '1' && c <= '9') return c - '1' + 26;
+  if (c >= 'a' && c <= 'z') return c - 'a';
+  if (c >= 'A' && c <= 'Z') return c - 'A';
+  return c;
+}
+
 void hud_draw_text(u32 shader, char* text, i32 x, i32 y, Font font, vec3 color) {
   canvas_uni1i(shader, "TILE_AMOUNT", font.tile_amount);
 
   for (u8 i = 0; text[i]; i++) {
-    c8 c = text[i];
-    if      (c == ' ')             c  =  59;
-    else if (c == '0')             c  =  35;
-    else if (c >= '1' && c <= '9') c  = c - '1' + 26;
-    else if (c >= 'a' && c <= 'z') c -= 'a';
-    else if (c >= 'A' && c <= 'Z') c -= 'A';
+    c8 c = _map_font(text[i]);
     canvas_uni1i(shader, "TILE", c);
     hud_draw_rec(shader, font.texture, color, x + (font.size + font.spacing) * i, y, font.size, font.size * font.ratio);
   }
 
   canvas_uni1i(shader, "TILE_AMOUNT", 0);
   canvas_uni1i(shader, "TILE", 0);
+}
+
+void canvas_draw_text(u32 shader, char* text, i32 x, i32 y, i32 z, f32 size, Font font, Material material, vec3 rotation) {
+  glDisable(GL_CULL_FACE);
+  size *= 0.1;
+  canvas_set_material(shader, material);
+  canvas_uni1i(shader, "MAT.S_DIF", font.texture ? (font.texture - GL_TEXTURE0) : 29);
+  canvas_uni1i(shader, "TILE_AMOUNT", font.tile_amount);
+
+  mat4 model;
+  glm_mat4_identity(model);
+  glm_translate(model, VEC3(x, y, z));
+  glm_rotate(model, rotation[0], VEC3(1, 0, 0));
+  glm_rotate(model, rotation[1], VEC3(0, 1, 0));
+  glm_rotate(model, rotation[2], VEC3(0, 0, 1));
+  glm_scale(model,     VEC3(font.size * size, font.size * font.ratio * size, 1));
+
+  for (u8 i = 0; text[i]; i++) {
+    c8 c = _map_font(text[i]);
+    canvas_uni1i(shader, "TILE", c);
+
+
+    glBindBuffer(GL_ARRAY_BUFFER, PLANE_VBO);
+    glBindVertexArray(PLANE_VAO);
+    canvas_unim4(shader, "MODEL", *model);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+
+    glm_translate(model, VEC3(1 + (font.spacing * size) / (font.size * size), 0, 0));
+  }
+
+  canvas_uni1i(shader, "TILE_AMOUNT", 0);
+  canvas_uni1i(shader, "TILE", 0);
+  glEnable(GL_CULL_FACE);
 }

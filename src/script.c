@@ -24,8 +24,9 @@ int main() {
 
   // Material
   Material m_sphere = { DEEP_PURPLE, 0.3, 0.6 };
-  Material m_cube   = { DEEP_ORANGE, 0.3, 0.6 };
+  Material m_cube   = { DEEP_GREEN, 0.3, 0.6 };
   Material m_glass  = { WHITE,       0.3, 0.6, .tex = GL_TEXTURE0 };
+  Material m_text   = { DEEP_RED, 0.5, 0.5, .lig = 1 };
 
   // Light
   PntLig light = { WHITE, { 2 }, 1, 0.07, 0.017 };
@@ -74,6 +75,8 @@ int main() {
     model_bind(glass, shader);
     glm_translate(glass->model, VEC3(sin(glfwGetTime() + PI) * 5, -0.5, cos(glfwGetTime() + PI) * 5));
     model_draw(glass, shader);
+
+    canvas_draw_text(shader, "alaanvv", 0, 0, -5, 1, font, m_text, VEC3(glfwGetTime() * PI4, sin(glfwGetTime()* 2) * PI4, sin(glfwGetTime()*7) * PI2));
 
     // HUD Drawing
     glUseProgram(hud_shader);

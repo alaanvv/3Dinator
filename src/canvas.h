@@ -9,12 +9,18 @@
 #define CLAMP(x, y, z) (MAX(MIN(z, y), x))
 #define CIRCULAR_CLAMP(x, y, z) ((y < x) ? z : ((y > z) ? x : y))
 #define RAND(min, max) (random() % (max - min) + min)
+#define RAND(min, max) (rand() % (max - min) + min)
 #define PRINT(...) { printf(__VA_ARGS__); printf("\n"); }
 #define ASSERT(x, ...) if (!(x)) { PRINT(__VA_ARGS__); exit(1); }
+#define VEC2_COPY(v1, v2) { v2[0] = v1[0]; v2[1] = v1[1]; }
 #define VEC2_COMPARE(v1, v2) (v1[0] == v2[0] && v1[1] == v2[1])
+#define VEC3_COPY(v1, v2) { v2[0] = v1[0]; v2[1] = v1[1]; v2[2] = v1[2]; }
+#define VEC3_ADD(v1, v2) { v1[0] += v2[0]; v1[1] += v2[1]; v1[2] += v2[2]; }
 #define VEC3_COMPARE(v1, v2) (v1[0] == v2[0] && v1[1] == v2[1] && v1[2] == v2[2])
 #define VERTEX_COPY(from, to) { for (u8 i_ = 0; i_ < 8; i_++) to[i_] = from[i_]; }
+#define VEC2(a, b)    (vec2) { a, b }
 #define VEC3(a, b, c) (vec3) { a, b, c }
+#define LEN(v) ( sizeof(v) / sizeof(v[0]) )
 
 #define PI  3.14159
 #define TAU PI * 2
@@ -22,11 +28,14 @@
 #define PI4 PI / 4
 
 #define WHITE         { 1.00, 1.00, 1.00 }
+#define GRAY          { 0.50, 0.50, 0.50 }
 #define BLACK         { 0.00, 0.00, 0.00 }
+#define PURPLE        { 0.55, 0.41, 0.62 }
 #define PASTEL_BLUE   { 0.69, 0.87, 1.00 }
 #define PASTEL_PINK   { 1.00, 0.75, 0.79 }
 #define PASTEL_GREEN  { 0.60, 0.98, 0.60 }
 #define PASTEL_YELLOW { 1.00, 1.00, 0.60 }
+#define YELLOW        { 0.80, 0.80, 0.30 }
 #define PASTEL_PURPLE { 0.80, 0.70, 1.00 }
 #define DEEP_RED      { 0.60, 0.00, 0.00 }
 #define DEEP_BLUE     { 0.00, 0.00, 0.50 }

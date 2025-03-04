@@ -76,7 +76,7 @@ int main() {
     glm_translate(glass->model, VEC3(sin(glfwGetTime() + PI) * 5, -0.5, cos(glfwGetTime() + PI) * 5));
     model_draw(glass, shader);
 
-    canvas_draw_text(shader, "alaanvv", 0, 0, -5, 1, font, m_text, VEC3(glfwGetTime() * PI4, sin(glfwGetTime()* 2) * PI4, sin(glfwGetTime()*7) * PI2));
+    canvas_draw_text(shader, "alaanvv", 0, 0, -5, 0.01, font, m_text, VEC3(glfwGetTime() * PI4, sin(glfwGetTime()* 2) * PI4, sin(glfwGetTime()*7) * PI2));
 
     // HUD Drawing
     glUseProgram(hud_shader);

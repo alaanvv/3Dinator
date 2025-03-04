@@ -547,9 +547,14 @@ void hud_draw_text(u32 shader, char* text, i32 x, i32 y, Font font, vec3 color) 
   canvas_uni1i(shader, "TILE", 0);
 }
 
-void canvas_draw_text(u32 shader, char* text, i32 x, i32 y, i32 z, f32 size, Font font, Material material, vec3 rotation) {
+f32 canvas_text_width(char* text, Font font, f32 size) {
+    u32 i = 0;
+    while (text[i]) i++;
+    return i * (1 + (f32) font.spacing / font.size) * font.size * size;
+}
+
+void canvas_draw_text(u32 shader, char* text, f32 x, f32 y, f32 z, f32 size, Font font, Material material, vec3 rotation) {
   glDisable(GL_CULL_FACE);
-  size *= 0.1;
   canvas_set_material(shader, material);
   canvas_uni1i(shader, "MAT.S_DIF", font.texture ? (font.texture - GL_TEXTURE0) : 29);
   canvas_uni1i(shader, "TILE_AMOUNT", font.tile_amount);

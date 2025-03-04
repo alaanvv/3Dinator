@@ -8,7 +8,6 @@
 #define MAX(x, y) (x > y ? x : y)
 #define CLAMP(x, y, z) (MAX(MIN(z, y), x))
 #define CIRCULAR_CLAMP(x, y, z) ((y < x) ? z : ((y > z) ? x : y))
-#define RAND(min, max) (random() % (max - min) + min)
 #define RAND(min, max) (rand() % (max - min) + min)
 #define PRINT(...) { printf(__VA_ARGS__); printf("\n"); }
 #define ASSERT(x, ...) if (!(x)) { PRINT(__VA_ARGS__); exit(1); }

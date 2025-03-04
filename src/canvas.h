@@ -314,29 +314,6 @@ void canvas_set_material(u32 shader, Material mat) {
   canvas_uni1i(shader, "MAT.LIG", mat.lig);
 }
 
-// Animation
-
-typedef struct {
-  u8  stage, size;
-  f32 pos;
-} Animation;
-
-void animation_start(Animation* anim) {
-  anim->stage = 1;
-}
-
-u8 animation_run(Animation* anim, f32 rate) {
-  if (!anim->stage) return 0;
-  anim->pos += rate;
-  if (anim->pos < 1) return 0;
-
-  anim->pos = 0;
-  anim->stage += 1;
-  if (anim->stage <= anim->size) return 0;
-  anim->stage = 0;
-  return 1;
-}
-
 // Model
 
 typedef f32 Vertex[8];

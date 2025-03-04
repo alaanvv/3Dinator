@@ -20,7 +20,7 @@ vec3 mouse;
 // ---
 
 int main() {
-  canvas_init(&cam, (CanvasInitConfig) { "FONT", 1, FULLSCREEN, SCREEN_SIZE });
+  canvas_init(&cam, (CanvasInitConfig) { "FONT", 1, FULLSCREEN, SCREEN_SIZE, BLACK });
 
   // Material
   Material m_sphere = { DEEP_PURPLE, 0.3, 0.6 };

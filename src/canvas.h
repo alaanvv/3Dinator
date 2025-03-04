@@ -70,6 +70,7 @@ typedef struct {
   char* title;
   u8 capture_mouse, fullscreen;
   f32 screen_size;
+  vec3 clear_color;
 } CanvasInitConfig;
 
 u32 PLANE_VAO, PLANE_VBO;
@@ -83,7 +84,6 @@ void canvas_init(Camera* cam, CanvasInitConfig config) {
   const GLFWvidmode* mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
   cam->width  = mode->width  * config.screen_size;
   cam->height = mode->height * config.screen_size;
-
   cam->window = glfwCreateWindow(cam->width, cam->height, config.title, config.fullscreen ? glfwGetPrimaryMonitor() : NULL, NULL);
   glfwMakeContextCurrent(cam->window);
   gladLoadGLLoader((GLADloadproc) glfwGetProcAddress);
@@ -92,7 +92,7 @@ void canvas_init(Camera* cam, CanvasInitConfig config) {
   glEnable(GL_BLEND);
   glEnable(GL_CULL_FACE);
 
-  glClearColor(0.0, 0.0, 0.0, 1);
+  glClearColor(config.clear_color[0], config.clear_color[1], config.clear_color[2], 1);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
   if (config.capture_mouse) glfwSetInputMode(cam->window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);

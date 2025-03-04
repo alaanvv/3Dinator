@@ -59,7 +59,7 @@ void canvas_vertex_attrib_pointer(u8, u8, GLenum, GLenum, u16, void*);
 // Canvas
 
 typedef struct {
-  f32 fov, near, far, pitch, yaw;
+  f32 fov, near_plane, far_plane, pitch, yaw;
   vec3 pos, dir, rig;
   u16 width, height;
   GLFWwindow* window;
@@ -120,7 +120,7 @@ void canvas_init(Camera* cam, CanvasInitConfig config) {
 
 void generate_proj_mat(Camera* cam, u32 shader) {
   glm_mat4_identity(cam->proj);
-  glm_perspective(cam->fov, (f32) cam->width / cam->height, cam->near, cam->far, cam->proj);
+  glm_perspective(cam->fov, (f32) cam->width / cam->height, cam->near_plane, cam->far_plane, cam->proj);
   glUniformMatrix4fv(UNI(shader, "PROJ"), 1, GL_FALSE, cam->proj[0]);
 }
 

@@ -535,26 +535,16 @@ void hud_draw_rec(u32 shader, GLenum texture, vec3 color, i32 x, i32 y, i32 widt
 // Text
 
 typedef struct {
-  u32 texture, tile_amount, size;
+  u32 texture, size;
   i16 spacing;
   f32 ratio;
 } Font;
 
-u8 _map_font(u8 c) {
-  if (c == ' ')             return 59;
-  if (c == '0')             return 35;
-  if (c >= '1' && c <= '9') return c - '1' + 26;
-  if (c >= 'a' && c <= 'z') return c - 'a';
-  if (c >= 'A' && c <= 'Z') return c - 'A';
-  return c;
-}
-
 void hud_draw_text(u32 shader, char* text, i32 x, i32 y, Font font, vec3 color) {
-  canvas_uni1i(shader, "TILE_AMOUNT", font.tile_amount);
+  canvas_uni1i(shader, "TILE_AMOUNT", 95);
 
   for (u8 i = 0; text[i]; i++) {
-    c8 c = _map_font(text[i]);
-    canvas_uni1i(shader, "TILE", c);
+    canvas_uni1i(shader, "TILE", text[i] - 32);
     hud_draw_rec(shader, font.texture, color, x + (font.size + font.spacing) * i, y, font.size, font.size * font.ratio);
   }
 
@@ -572,7 +562,7 @@ void canvas_draw_text(u32 shader, char* text, f32 x, f32 y, f32 z, f32 size, Fon
   glDisable(GL_CULL_FACE);
   canvas_set_material(shader, material);
   canvas_uni1i(shader, "MAT.S_DIF", font.texture ? (font.texture - GL_TEXTURE0) : 29);
-  canvas_uni1i(shader, "TILE_AMOUNT", font.tile_amount);
+  canvas_uni1i(shader, "TILE_AMOUNT", 95);
 
   mat4 model;
   glm_mat4_identity(model);
@@ -583,8 +573,7 @@ void canvas_draw_text(u32 shader, char* text, f32 x, f32 y, f32 z, f32 size, Fon
   glm_scale(model,     VEC3(font.size * size, font.size * font.ratio * size, 1));
 
   for (u8 i = 0; text[i]; i++) {
-    c8 c = _map_font(text[i]);
-    canvas_uni1i(shader, "TILE", c);
+    canvas_uni1i(shader, "TILE", text[i] - 32);
 
 
     glBindBuffer(GL_ARRAY_BUFFER, PLANE_VBO);

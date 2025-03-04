@@ -270,15 +270,30 @@ u32 canvas_create_texture(GLenum unit, char path[], TextureConfig config) {
   FILE* img = fopen(path, "r");
   ASSERT(img, "Can't open image (%s)", path);
 
-  u16 ppm, width, height, max_color;
-  fscanf(img, "P%hi %hi %hi %hi", &ppm, &width, &height, &max_color);
-  ASSERT(ppm == 3, "Not a PPM3 (%s)", path);
+  u16 ppm, width, height, maxval;
+  fscanf(img, "P%hi %hi %hi %hi", &ppm, &width, &height, &maxval);
 
   f32* buffer = malloc(sizeof(f32) * width * height * 3);
-  for (u32 i = 0; i < width * height * 3; i += 3) {
-    fscanf(img, "%f %f %f", &buffer[i], &buffer[i + 1], &buffer[i + 2]);
-    glm_vec3_scale(&buffer[i], (f32) 1 / max_color, &buffer[i]);
+  f32 _temp[3];
+  u8   temp[3];
+
+  if (ppm == 3) {
+    for (u32 i = 0; i < width * height * 3; i += 3) {
+      fscanf(img, "%f %f %f", &buffer[i], &buffer[i + 1], &buffer[i + 2]);
+      glm_vec3_scale(&buffer[i], (f32) 1 / maxval, &buffer[i]);
+    }
   }
+
+  if (ppm == 6) {
+    img = fopen(path, "rb");
+    fscanf(img, "P%*d %*d %*d %*d\n");
+    for (u32 i = 0; i < width * height * 3; i += 3) {
+      fread(temp, 1 + (maxval > 255), 3, img);
+      VEC3_COPY(temp, _temp);
+      glm_vec3_scale(_temp, (f32) 1 / maxval, &buffer[i]);
+    }
+  }
+
   fclose(img);
 
   u32 texture;

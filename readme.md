@@ -5,7 +5,7 @@
   <img width='25%' src='https://github.com/alaanvv/Image-Database/blob/main/Misc/bottle.gif?raw=true'>
 
   A 3D engine made completely from scratch
-  using only **OpenGL and cglm**
+  using **OpenGL, cglm and now introducing miniaudio**
 
   <img width='90%' src='https://github.com/alaanvv/Image-Database/blob/main/3Dinator/font.png?raw=true'>
 </div>
@@ -14,9 +14,6 @@
 
 Those meshes were made **manually**, so this **bottle** <br>
 is more amazing than the whole code <br>
-
-I changed the normal projection matrix for a vector because <br>
-it seems to be faster and cleaner (maybe idk) <br>
 
 Since I'm using `.obj` files now, I'll let the bottle live here
 

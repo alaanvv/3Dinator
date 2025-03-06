@@ -44,6 +44,10 @@ int main() {
   // Font
   Font font = { GL_TEXTURE2, 20, 5, 7.0 / 5 };
 
+  // Audio
+  init_audio_engine((char*[32]) { "idk" }, 1);
+  play_audio("idk");
+
   // Shader
   shader = shader_create_program("shd/obj.v", "shd/obj.f");
   generate_proj_mat(&cam, shader);

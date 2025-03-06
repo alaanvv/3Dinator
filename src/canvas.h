@@ -588,3 +588,39 @@ void canvas_draw_text(u32 shader, char* text, f32 x, f32 y, f32 z, f32 size, Fon
   canvas_uni1i(shader, "TILE", 0);
   glEnable(GL_CULL_FACE);
 }
+
+// Audio
+
+#define MINIAUDIO_IMPLEMENTATION
+#include "miniaudio.h"
+
+typedef struct {
+  ma_sound sound;
+  c8 name[32];
+} Sound;
+
+ma_engine engine;
+Sound* sounds;
+u8 sound_count;
+
+void init_audio_engine(c8** names, u8 amount) {
+  ASSERT(ma_engine_init(NULL, &engine) == MA_SUCCESS, "Failed to init audio");
+  sound_count = amount;
+
+  sounds = malloc(amount * sizeof(Sound));
+
+  for (u8 i = 0; i < amount; i++) {
+    c8 buffer[64] = { 0 };
+    sprintf(buffer, "wav/%s.wav", names[i]);
+    ASSERT(ma_sound_init_from_file(&engine, buffer, 0, NULL, NULL, &sounds[i].sound) == MA_SUCCESS, "Failed to load %s.wav", names[i]);
+    strcpy(sounds[i].name, names[i]);
+  }
+}
+
+void play_audio(c8* name) {
+  for (int i = 0; i < sound_count; i++) {
+    if (strcmp(sounds[i].name, name)) continue;
+    ma_sound_start(&sounds[i].sound);
+    return;
+  }
+}

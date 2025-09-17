@@ -2,8 +2,8 @@
 
 #define CAMERA_LOCK PI2 * 0.9
 #define SENSITIVITY 0.001
-#define SCREEN_SIZE 0.5
-#define FULLSCREEN 0
+#define SCREEN_SIZE 1
+#define FULLSCREEN 1
 #define UPSCALE 0.2
 #define FOV PI4
 #define SPEED 3

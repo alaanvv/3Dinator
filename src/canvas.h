@@ -59,7 +59,7 @@ void canvas_vertex_attrib_pointer(u8, u8, GLenum, GLenum, u16, void*);
 // Canvas
 
 typedef struct {
-  f32 fov, near_plane, far_plane, pitch, yaw;
+  f32 fov, near_plane, far_plane, sensitivity, camera_lock, speed, pitch, yaw, fps;
   vec3 pos, dir, rig;
   u16 width, height;
   GLFWwindow* window;
@@ -71,11 +71,11 @@ typedef struct {
   u8 capture_mouse, fullscreen;
   f32 screen_size;
   vec3 clear_color;
-} CanvasInitConfig;
+} CanvasConfig;
 
 u32 PLANE_VAO, PLANE_VBO;
 
-void canvas_init(Camera* cam, CanvasInitConfig config) {
+void canvas_init(Camera* cam, CanvasConfig config) {
   glfwInit();
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -137,9 +137,9 @@ void generate_ortho_mat(Camera* cam, u32 shader) {
   glUniformMatrix4fv(UNI(shader, "PROJ"), 1, GL_FALSE, cam->ortho[0]);
 }
 
-void update_fps(f32* fps) {
+void update_fps(Camera* cam) {
   static f32 tick = 0;
-  *fps = 1 / (glfwGetTime() - tick);
+  cam->fps = 1 / (glfwGetTime() - tick);
   tick = glfwGetTime();
 }
 
@@ -208,8 +208,13 @@ u32 _create_shader(GLenum type, char path[]) {
   return shader;
 }
 
-u32 shader_create_program(char vertex_path[], char fragment_path[]) {
+u32 shader_create_program(char name[]) {
+  c8 vertex_path[64] = { 0 };
+  sprintf(vertex_path, "shd/%s.v", name);
   u32 v_shader = _create_shader(GL_VERTEX_SHADER, vertex_path);
+
+  c8 fragment_path[64] = { 0 };
+  sprintf(fragment_path, "shd/%s.f", name);
   u32 f_shader = _create_shader(GL_FRAGMENT_SHADER, fragment_path);
 
   u32 shader_program = glCreateProgram();
@@ -266,7 +271,10 @@ typedef struct {
   GLenum wrap_s, wrap_t, min_filter, mag_filter;
 } TextureConfig;
 
-u32 canvas_create_texture(GLenum unit, char path[], TextureConfig config) {
+u32 canvas_create_texture(GLenum unit, char* name, TextureConfig config) {
+  c8 path[64] = { 0 };
+  sprintf(path, "img/%s.ppm", name);
+
   FILE* img = fopen(path, "r");
   ASSERT(img, "Can't open image (%s)", path);
 
@@ -399,9 +407,12 @@ void model_parse(Model* model, const c8* path, u32* size, f32 scale) {
   model->vertexes = square;
 }
 
-Model* model_create(const c8* path, Material* material, f32 scale) {
+Model* model_create(const c8* name, Material* material, f32 scale) {
+  c8 buffer[64] = { 0 };
+  sprintf(buffer, "obj/%s.obj", name);
+
   Model* model = malloc(sizeof(Model));
-  model_parse(model, path, &model->size, scale);
+  model_parse(model, buffer, &model->size, scale);
   model->material = material;
 
   model->VAO = canvas_create_VAO();
@@ -623,4 +634,55 @@ void play_audio(c8* name) {
     ma_sound_start(&sounds[i].sound);
     return;
   }
+}
+
+// Camera
+
+void camera_compute_movement(Camera* cam, u8 shader) {
+  vec3 prompted_move = {
+    (glfwGetKey(cam->window, GLFW_KEY_D) == GLFW_PRESS ? cam->speed / cam->fps : 0) + (glfwGetKey(cam->window, GLFW_KEY_A) == GLFW_PRESS ? -cam->speed / cam->fps : 0),
+    (glfwGetKey(cam->window, GLFW_KEY_E) == GLFW_PRESS ? cam->speed / cam->fps : 0) + (glfwGetKey(cam->window, GLFW_KEY_Q) == GLFW_PRESS ? -cam->speed / cam->fps : 0),
+    (glfwGetKey(cam->window, GLFW_KEY_W) == GLFW_PRESS ? cam->speed / cam->fps : 0) + (glfwGetKey(cam->window, GLFW_KEY_S) == GLFW_PRESS ? -cam->speed / cam->fps : 0)
+  };
+
+  if (prompted_move[0] || prompted_move[1] || prompted_move[2]) {
+    vec3 lateral  = { 0, 0, 0 };
+    glm_vec3_scale(cam->rig, prompted_move[0], lateral);
+    vec3 frontal  = { 0, 0, 0 };
+    glm_vec3_scale(cam->dir, prompted_move[2], frontal);
+    vec3 vertical = { 0, prompted_move[1], 0 };
+
+    glm_vec3_add(cam->pos, lateral,  cam->pos);
+    glm_vec3_add(cam->pos, frontal,  cam->pos);
+    glm_vec3_add(cam->pos, vertical, cam->pos);
+    glUseProgram(shader);
+    generate_view_mat(cam, shader);
+  };
+}
+
+void camera_compute_direction(Camera* cam, u8 shader) {
+  static vec2 mouse;
+  f64 x, y;
+  glfwGetCursorPos(cam->window, &x, &y);
+
+  if (!mouse[0]) { mouse[0] = x; mouse[1] = y; }
+  if (x == mouse[0] && y == mouse[1]) return;
+
+  cam->yaw  += (x - mouse[0]) * cam->sensitivity;
+  cam->pitch = CLAMP(-cam->camera_lock, cam->pitch + (mouse[1] - y) * cam->sensitivity, cam->camera_lock);
+
+  glm_vec3_copy(VEC3(cos(cam->yaw - PI2) * cos(cam->pitch), sin(cam->pitch), sin(cam->yaw - PI2) * cos(cam->pitch)), cam->dir);
+  glm_vec3_copy(VEC3(cos(cam->yaw) * cos(cam->pitch), 0, sin(cam->yaw) * cos(cam->pitch)), cam->rig);
+  glm_normalize(cam->rig);
+
+  glUseProgram(shader);
+  generate_view_mat(cam, shader);
+  mouse[0] = x;
+  mouse[1] = y;
+}
+
+void camera_handle_inputs(Camera* cam, u32 shader) {
+  if (glfwGetKey(cam->window, GLFW_KEY_ESCAPE) == GLFW_PRESS) glfwSetWindowShouldClose(cam->window, 1);
+  camera_compute_movement(cam, shader);
+  camera_compute_direction(cam, shader);
 }

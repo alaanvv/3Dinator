@@ -12,6 +12,12 @@
 
 ---
 
+# Setup
+
+- Add to `/inc`: KHR, glad, miniaudio, glfw and cglm
+
+---
+
 Those meshes were made **manually**, so this **bottle** <br>
 is more amazing than the whole code <br>
 

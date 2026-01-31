@@ -800,9 +800,9 @@ typedef struct {
 Entity* entities[MAX_ENTITIES];
 u8 entities_size = 0;
 
-Entity* entity_create(Model* model) {
+Entity* entity_create(const c8* name, Material material) {
   Entity* entity = malloc(sizeof(Entity));
-  entity->model = model;
+  entity->model = model_create(name, material);
   VEC3_COPY(VEC3(0, 0, 0), entity->pos);
   VEC3_COPY(VEC3(0, 0, 0), entity->rot);
   entities[entities_size++] = entity;

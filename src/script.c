@@ -34,12 +34,6 @@ int main() {
   // Light
   PntLig light = { WHITE, { 2 }, 1, 0.07, 0.017 };
 
-  // Model
-  Model* mo_sphere = model_create("sphere", m_sphere);
-  Model* mo_glass  = model_create("cube",   m_glass);
-  Model* mo_cube   = model_create("cube",   m_cube);
-  Model* mo_lamp   = model_create("sphere", m_lamp);
-
   // Font
   Font font = { texture( "font"), 20, 5, 7.0 / 5 };
 
@@ -55,10 +49,10 @@ int main() {
   generate_ortho_mat(&cam, hud_shader);
 
   // Entities
-  Entity* sphere = entity_create(mo_sphere);
-  Entity* glass  = entity_create(mo_cube);
-  Entity* cube   = entity_create(mo_glass);
-  Entity* lamp   = entity_create(mo_lamp);
+  Entity* sphere = entity_create("sphere", m_sphere);
+  Entity* glass  = entity_create("cube", m_glass);
+  Entity* cube   = entity_create("cube", m_cube);
+  Entity* lamp   = entity_create("sphere", m_lamp);
   Text3D* text   = text_3d_create("ALAANVV", font, 0.01, m_text);
 
   while (!glfwWindowShouldClose(cam.window)) {

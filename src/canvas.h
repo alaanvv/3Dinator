@@ -2,6 +2,8 @@
 #include <cglm/cglm.h>
 #include <GLFW/glfw3.h>
 
+#define MAX_ENTITIES 100
+
 #define UNI(shd, uni) (glGetUniformLocation(shd, uni))
 
 #define MIN(x, y) (x < y ? x : y)
@@ -685,4 +687,37 @@ void camera_handle_inputs(Camera* cam, u32 shader) {
   if (glfwGetKey(cam->window, GLFW_KEY_ESCAPE) == GLFW_PRESS) glfwSetWindowShouldClose(cam->window, 1);
   camera_compute_movement(cam, shader);
   camera_compute_direction(cam, shader);
+}
+
+// Entity
+
+typedef struct {
+  Model* model;
+  vec3 pos, rot;
+} Entity;
+
+Entity* entities[MAX_ENTITIES];
+u8 entities_size = 0;
+
+Entity* entity_create(Model* model) {
+  Entity* entity = malloc(sizeof(Entity));
+  entity->model = model;
+  VEC3_COPY(VEC3(0, 0, 0), entity->pos);
+  VEC3_COPY(VEC3(0, 0, 0), entity->rot);
+  entities[entities_size++] = entity;
+  return entity;
+}
+
+void entity_draw(Entity e, u32 shader) {
+  model_bind(e.model, shader);
+  glm_translate(e.model->model, e.pos);
+  glm_rotate(e.model->model, e.rot[0], VEC3(1, 0, 0));
+  glm_rotate(e.model->model, e.rot[1], VEC3(0, 1, 0));
+  glm_rotate(e.model->model, e.rot[2], VEC3(0, 0, 1));
+  model_draw(e.model, shader);
+}
+
+void entity_draw_all(u32 shader) {
+  for (u8 i = 0; i < entities_size; i++)
+    entity_draw(*entities[i], shader);
 }

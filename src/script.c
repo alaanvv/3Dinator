@@ -58,33 +58,26 @@ int main() {
   hud_shader = shader_create_program("hud");
   generate_ortho_mat(&cam, hud_shader);
 
+  // Entities
+  Entity* sphere = entity_create(mo_sphere);
+  Entity* glass  = entity_create(mo_cube);
+  Entity* cube   = entity_create(mo_glass);
+
   while (!glfwWindowShouldClose(cam.window)) {
+    VEC3_COPY(VEC3(sin(glfwGetTime())      * 8, 0,    cos(glfwGetTime()) * 8),      sphere->pos);
+    VEC3_COPY(VEC3(sin(glfwGetTime() + PI) * 8, -0.5, cos(glfwGetTime() + PI) * 8), cube->pos);
+    VEC3_COPY(VEC3(sin(glfwGetTime() + PI) * 5, -0.5, cos(glfwGetTime() + PI) * 5), glass->pos);
+
     // 3D Drawing
     glUseProgram(shader);
-
     model_bind(sphere, shader);
     model_draw_pnt_light(sphere, light, shader);
-
-    model_bind(sphere, shader);
-    glm_translate(sphere->model, VEC3(sin(glfwGetTime()) * 8, 0, cos(glfwGetTime()) * 8));
-    model_draw(sphere, shader);
-
-    model_bind(cube, shader);
-    glm_translate(cube->model, VEC3(sin(glfwGetTime() + PI) * 8, -0.5, cos(glfwGetTime() + PI) * 8));
-    model_draw(cube, shader);
-
-    model_bind(glass, shader);
-    glm_translate(glass->model, VEC3(sin(glfwGetTime() + PI) * 5, -0.5, cos(glfwGetTime() + PI) * 5));
-    model_draw(glass, shader);
 
     canvas_draw_text(shader, "ALAANVV", 0, 0, -5, 0.01, font, m_text, VEC3(glfwGetTime() * PI4, sin(glfwGetTime()* 2) * PI4, sin(glfwGetTime()*7) * PI2));
 
     // HUD Drawing
     glUseProgram(hud_shader);
-
     hud_draw_rec(hud_shader, GL_TEXTURE1, (vec3) WHITE, 0, 0, 300, 400);
-
-    // Draw Text
     c8 buffer[10];
     sprintf(buffer, "%d FPS", (i32) cam.fps);
     hud_draw_text(hud_shader, buffer, 10, cam.height - font.size * font.ratio - 10, font, (vec3) WHITE);
@@ -93,10 +86,8 @@ int main() {
     // Finish
     glfwSwapBuffers(cam.window);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    glfwPollEvents();
     camera_handle_inputs(&cam, shader);
-
+    glfwPollEvents();
     update_fps(&cam);
   }
 

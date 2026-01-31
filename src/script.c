@@ -29,6 +29,7 @@ int main() {
   Material m_cube   = { DEEP_GREEN,  0.3, 0.6 };
   Material m_glass  = { WHITE,       0.3, 0.6, .tex = GL_TEXTURE0 };
   Material m_text   = { DEEP_RED,    0.5, 0.5, .lig = 1 };
+  Material m_lamp   = { WHITE,                 .lig = 1 };
 
   // Light
   PntLig light = { WHITE, { 2 }, 1, 0.07, 0.017 };
@@ -37,6 +38,7 @@ int main() {
   Model* mo_sphere = model_create("sphere", m_sphere, 1);
   Model* mo_glass  = model_create("cube",   m_glass,  1);
   Model* mo_cube   = model_create("cube",   m_cube,   1);
+  Model* mo_lamp   = model_create("sphere", m_lamp,   1);
 
   // Texture
   canvas_create_texture(GL_TEXTURE0, "glass", TEXTURE_DEFAULT);
@@ -62,6 +64,7 @@ int main() {
   Entity* sphere = entity_create(mo_sphere);
   Entity* glass  = entity_create(mo_cube);
   Entity* cube   = entity_create(mo_glass);
+  Entity* lamp   = entity_create(mo_lamp);
 
   while (!glfwWindowShouldClose(cam.window)) {
     VEC3_COPY(VEC3(sin(glfwGetTime())      * 8, 0,    cos(glfwGetTime()) * 8),      sphere->pos);
@@ -70,9 +73,7 @@ int main() {
 
     // 3D Drawing
     glUseProgram(shader);
-    model_bind(sphere, shader);
-    model_draw_pnt_light(sphere, light, shader);
-
+    entity_draw_all(shader);
     canvas_draw_text(shader, "ALAANVV", 0, 0, -5, 0.01, font, m_text, VEC3(glfwGetTime() * PI4, sin(glfwGetTime()* 2) * PI4, sin(glfwGetTime()*7) * PI2));
 
     // HUD Drawing

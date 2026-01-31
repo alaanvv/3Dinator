@@ -499,35 +499,6 @@ void canvas_set_spt_lig(u32 shader, SptLig spt_lig, u32 i) {
   canvas_uni1f(shader, uniform, spt_lig.out);
 }
 
-void model_draw_dir_light(Model* model, DirLig lig, u32 shader) {
-  canvas_uni3f(shader, "MAT.COL", lig.col[0], lig.col[1], lig.col[2]);
-  canvas_uni1i(shader, "MAT.LIG", 1);
-  glBindBuffer(GL_ARRAY_BUFFER, model->VBO);
-  glBindVertexArray(model->VAO);
-  canvas_unim4(shader, "MODEL", model->model[0]);
-  glDrawArrays(GL_TRIANGLES, 0, model->size);
-}
-
-void model_draw_pnt_light(Model* model, PntLig lig, u32 shader) {
-  glm_translate(model->model, lig.pos);
-  canvas_uni3f(shader, "MAT.COL", lig.col[0], lig.col[1], lig.col[2]);
-  canvas_uni1i(shader, "MAT.LIG", 1);
-  glBindBuffer(GL_ARRAY_BUFFER, model->VBO);
-  glBindVertexArray(model->VAO);
-  canvas_unim4(shader, "MODEL", model->model[0]);
-  glDrawArrays(GL_TRIANGLES, 0, model->size);
-}
-
-void model_draw_spt_light(Model* model, SptLig lig, u32 shader) {
-  glm_translate(model->model, lig.pos);
-  canvas_uni3f(shader, "MAT.COL", lig.col[0], lig.col[1], lig.col[2]);
-  canvas_uni1i(shader, "MAT.LIG", 1);
-  glBindBuffer(GL_ARRAY_BUFFER, model->VBO);
-  glBindVertexArray(model->VAO);
-  canvas_unim4(shader, "MODEL", model->model[0]);
-  glDrawArrays(GL_TRIANGLES, 0, model->size);
-}
-
 // HUD
 
 void hud_draw_rec(u32 shader, GLenum texture, vec3 color, i32 x, i32 y, i32 width, i32 height) {

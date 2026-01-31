@@ -5,6 +5,7 @@
 #include <string.h>
 
 #define MAX_SOUNDS   100
+#define MAX_TEXTS_3D 100
 #define MAX_TEXTURES 100
 #define MAX_ENTITIES 100
 
@@ -64,6 +65,8 @@ void init_audio_engine();
 u32 canvas_create_VAO();
 u32 canvas_create_VBO(u32, const void*, GLenum);
 void canvas_vertex_attrib_pointer(u8, u8, GLenum, GLenum, u16, void*);
+void text_3d_draw_all(u32 shader);
+void entity_draw_all(u32 shader);
 
 // Canvas
 
@@ -153,6 +156,12 @@ void update_fps(Camera* cam) {
   static f32 tick = 0;
   cam->fps = 1 / (glfwGetTime() - tick);
   tick = glfwGetTime();
+}
+
+void canvas_draw_3d_entities(u32 shader) {
+  glUseProgram(shader);
+  text_3d_draw_all(shader);
+  entity_draw_all(shader);
 }
 
 // Object
@@ -570,6 +579,17 @@ typedef struct {
   f32 ratio;
 } Font;
 
+typedef struct {
+  Font font;
+  Material material;
+  char text[64];
+  vec3 pos, rot;
+  f32 size;
+} Text3D;
+
+Text3D texts_3d[MAX_TEXTS_3D];
+u8 texts_3d_size = 0;
+
 void hud_draw_text(u32 shader, char* text, i32 x, i32 y, Font font, vec3 color) {
   canvas_uni1i(shader, "TILE_AMOUNT", 95);
 
@@ -617,6 +637,25 @@ void canvas_draw_text(u32 shader, char* text, f32 x, f32 y, f32 z, f32 size, Fon
   canvas_uni1i(shader, "TILE_AMOUNT", 0);
   canvas_uni1i(shader, "TILE", 0);
   glEnable(GL_CULL_FACE);
+}
+
+Text3D* text_3d_create(char* text, Font font, f32 size, Material material) {
+  strcpy(texts_3d[texts_3d_size].text, text);
+  texts_3d[texts_3d_size].font = font;
+  texts_3d[texts_3d_size].material = material;
+  texts_3d[texts_3d_size].size = size;
+  VEC3_COPY(VEC3(0, 0, 0), texts_3d[texts_3d_size].pos);
+  VEC3_COPY(VEC3(0, 0, 0), texts_3d[texts_3d_size].rot);
+  return &texts_3d[texts_3d_size++];
+}
+
+void text_3d_draw(Text3D t, u32 shader) {
+  canvas_draw_text(shader, t.text, t.pos[0], t.pos[1], t.pos[2], t.size, t.font, t.material, t.rot);
+}
+
+void text_3d_draw_all(u32 shader) {
+  for (u8 i = 0; i < texts_3d_size; i++)
+    text_3d_draw(texts_3d[i], shader);
 }
 
 // Audio

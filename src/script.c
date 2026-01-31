@@ -59,16 +59,16 @@ int main() {
   Entity* glass  = entity_create(mo_cube);
   Entity* cube   = entity_create(mo_glass);
   Entity* lamp   = entity_create(mo_lamp);
+  Text3D* text   = text_3d_create("ALAANVV", font, 0.01, m_text);
 
   while (!glfwWindowShouldClose(cam.window)) {
     VEC3_COPY(VEC3(sin(glfwGetTime())      * 8, 0,    cos(glfwGetTime()) * 8),      sphere->pos);
     VEC3_COPY(VEC3(sin(glfwGetTime() + PI) * 8, -0.5, cos(glfwGetTime() + PI) * 8), cube->pos);
     VEC3_COPY(VEC3(sin(glfwGetTime() + PI) * 5, -0.5, cos(glfwGetTime() + PI) * 5), glass->pos);
+    VEC3_COPY(VEC3(0, 0, -5), text->pos);
+    VEC3_COPY(VEC3(glfwGetTime() * PI4, sin(glfwGetTime()* 2) * PI4, sin(glfwGetTime()*7) * PI2), text->rot);
 
-    // 3D Drawing
-    glUseProgram(shader);
-    entity_draw_all(shader);
-    canvas_draw_text(shader, "ALAANVV", 0, 0, -5, 0.01, font, m_text, VEC3(glfwGetTime() * PI4, sin(glfwGetTime()* 2) * PI4, sin(glfwGetTime()*7) * PI2));
+    canvas_draw_3d_entities(shader);
 
     // HUD Drawing
     glUseProgram(hud_shader);

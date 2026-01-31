@@ -34,9 +34,9 @@ int main() {
   PntLig light = { WHITE, { 2 }, 1, 0.07, 0.017 };
 
   // Model
-  Model* sphere = model_create("sphere", &m_sphere, 300);
-  Model* glass  = model_create("cube",   &m_glass,  1);
-  Model* cube   = model_create("cube",   &m_cube,   1);
+  Model* mo_sphere = model_create("sphere", m_sphere, 1);
+  Model* mo_glass  = model_create("cube",   m_glass,  1);
+  Model* mo_cube   = model_create("cube",   m_cube,   1);
 
   // Texture
   canvas_create_texture(GL_TEXTURE0, "glass", TEXTURE_DEFAULT);
@@ -55,7 +55,6 @@ int main() {
   generate_proj_mat(&cam, shader);
   generate_view_mat(&cam, shader);
   canvas_set_pnt_lig(shader, light, 0);
-
   hud_shader = shader_create_program("hud");
   generate_ortho_mat(&cam, hud_shader);
 

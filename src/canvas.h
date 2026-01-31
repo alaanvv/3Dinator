@@ -345,7 +345,7 @@ typedef struct {
   u32 size, VAO, VBO;
   Vertex* vertexes;
   mat4 model;
-  Material* material;
+  Material material;
 } Model;
 
 void model_parse(Model* model, const c8* path, u32* size, f32 scale) {
@@ -407,7 +407,7 @@ void model_parse(Model* model, const c8* path, u32* size, f32 scale) {
   model->vertexes = square;
 }
 
-Model* model_create(const c8* name, Material* material, f32 scale) {
+Model* model_create(const c8* name, Material material, f32 scale) {
   c8 buffer[64] = { 0 };
   sprintf(buffer, "obj/%s.obj", name);
 
@@ -425,7 +425,7 @@ Model* model_create(const c8* name, Material* material, f32 scale) {
 }
 
 void model_bind(Model* model, u32 shader) {
-  if (model->material != NULL) canvas_set_material(shader, *model->material);
+  canvas_set_material(shader, model->material);
   glm_mat4_identity(model->model);
 }
 

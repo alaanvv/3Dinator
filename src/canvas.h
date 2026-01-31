@@ -57,6 +57,7 @@ typedef float    f32;
 typedef double   f64;
 typedef char     c8;
 
+void init_audio_engine();
 u32 canvas_create_VAO();
 u32 canvas_create_VBO(u32, const void*, GLenum);
 void canvas_vertex_attrib_pointer(u8, u8, GLenum, GLenum, u16, void*);
@@ -121,6 +122,8 @@ void canvas_init(Camera* cam, CanvasConfig config) {
   PLANE_VBO = canvas_create_VBO(30 * sizeof(f32), square, GL_STATIC_DRAW);
   canvas_vertex_attrib_pointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(f32), (void*) 0);
   canvas_vertex_attrib_pointer(2, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(f32), (void*) (3 * sizeof(f32)));
+
+  init_audio_engine();
 }
 
 void generate_proj_mat(Camera* cam, u32 shader) {

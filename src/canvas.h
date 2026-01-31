@@ -2,8 +2,10 @@
 #include <glad/glad.h>
 #include <cglm/cglm.h>
 #include <GLFW/glfw3.h>
+#include <string.h>
 
-#define MAX_SOUNDS 100
+#define MAX_SOUNDS   100
+#define MAX_TEXTURES 100
 #define MAX_ENTITIES 100
 
 #define UNI(shd, uni) (glGetUniformLocation(shd, uni))
@@ -57,6 +59,7 @@ typedef float    f32;
 typedef double   f64;
 typedef char     c8;
 
+void texture_load_all();
 void init_audio_engine();
 u32 canvas_create_VAO();
 u32 canvas_create_VBO(u32, const void*, GLenum);
@@ -124,6 +127,7 @@ void canvas_init(Camera* cam, CanvasConfig config) {
   canvas_vertex_attrib_pointer(2, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(f32), (void*) (3 * sizeof(f32)));
 
   init_audio_engine();
+  texture_load_all();
 }
 
 void generate_proj_mat(Camera* cam, u32 shader) {
@@ -279,9 +283,17 @@ typedef struct {
   GLenum wrap_s, wrap_t, min_filter, mag_filter;
 } TextureConfig;
 
+typedef struct {
+  GLenum texture_unit;
+  c8 name[32];
+} TextureEntity;
+
+TextureEntity textures[MAX_TEXTURES];
+u8 textures_size = 0;
+
 u32 canvas_create_texture(GLenum unit, char* name, TextureConfig config) {
   c8 path[64] = { 0 };
-  sprintf(path, "img/%s.ppm", name);
+  sprintf(path, "img/%s", name);
 
   FILE* img = fopen(path, "r");
   ASSERT(img, "Can't open image (%s)", path);
@@ -325,6 +337,34 @@ u32 canvas_create_texture(GLenum unit, char* name, TextureConfig config) {
 
   free(buffer);
   return texture;
+}
+
+void texture_load_all() {
+  struct dirent* de;
+  DIR* dir = opendir("./img");
+  ASSERT(dir, "Could not open \"img\" directory");
+
+  while ((de = readdir(dir)) != NULL) {
+    if (de->d_type != DT_REG) continue;
+    c8 buffer[64] = { 0 };
+    sprintf(buffer, "img/%s", de->d_name);
+
+    GLenum unit = GL_TEXTURE0 + textures_size;
+    canvas_create_texture(unit, de->d_name, TEXTURE_DEFAULT);
+    textures[textures_size].texture_unit = unit;
+    strcpy(textures[textures_size++].name, de->d_name);
+  }
+}
+
+GLenum texture(c8* name) {
+  c8 buffer[64] = { 0 };
+  sprintf(buffer, "%s.ppm", name);
+  for (int i = 0; i < textures_size; i++) {
+    if (strcmp(textures[i].name, buffer)) continue;
+    return textures[i].texture_unit;
+  }
+
+  EXIT("Texture \"%s\" not found", name);
 }
 
 // Material

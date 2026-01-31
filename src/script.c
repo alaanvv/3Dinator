@@ -27,7 +27,7 @@ int main() {
   // Material
   Material m_sphere = { DEEP_PURPLE, 0.3, 0.6 };
   Material m_cube   = { DEEP_GREEN,  0.3, 0.6 };
-  Material m_glass  = { WHITE,       0.3, 0.6, .tex = GL_TEXTURE0 };
+  Material m_glass  = { WHITE,       0.3, 0.6, .tex = texture("glass") };
   Material m_text   = { DEEP_RED,    0.5, 0.5, .lig = 1 };
   Material m_lamp   = { WHITE,                 .lig = 1 };
 
@@ -40,13 +40,8 @@ int main() {
   Model* mo_cube   = model_create("cube",   m_cube,   1);
   Model* mo_lamp   = model_create("sphere", m_lamp,   1);
 
-  // Texture
-  canvas_create_texture(GL_TEXTURE0, "glass", TEXTURE_DEFAULT);
-  canvas_create_texture(GL_TEXTURE1, "hand",  TEXTURE_DEFAULT);
-  canvas_create_texture(GL_TEXTURE2, "font",  TEXTURE_DEFAULT);
-
   // Font
-  Font font = { GL_TEXTURE2, 20, 5, 7.0 / 5 };
+  Font font = { texture( "font"), 20, 5, 7.0 / 5 };
 
   // Audio
   play_audio("idk");
@@ -77,7 +72,7 @@ int main() {
 
     // HUD Drawing
     glUseProgram(hud_shader);
-    hud_draw_rec(hud_shader, GL_TEXTURE1, (vec3) WHITE, 0, 0, 300, 400);
+    hud_draw_rec(hud_shader, texture("hand"), (vec3) WHITE, 0, 0, 300, 400);
     c8 buffer[10];
     sprintf(buffer, "%d FPS", (i32) cam.fps);
     hud_draw_text(hud_shader, buffer, 10, cam.height - font.size * font.ratio - 10, font, (vec3) WHITE);

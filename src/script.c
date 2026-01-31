@@ -35,10 +35,10 @@ int main() {
   PntLig light = { WHITE, { 2 }, 1, 0.07, 0.017 };
 
   // Model
-  Model* mo_sphere = model_create("sphere", m_sphere, 1);
-  Model* mo_glass  = model_create("cube",   m_glass,  1);
-  Model* mo_cube   = model_create("cube",   m_cube,   1);
-  Model* mo_lamp   = model_create("sphere", m_lamp,   1);
+  Model* mo_sphere = model_create("sphere", m_sphere);
+  Model* mo_glass  = model_create("cube",   m_glass);
+  Model* mo_cube   = model_create("cube",   m_cube);
+  Model* mo_lamp   = model_create("sphere", m_lamp);
 
   // Font
   Font font = { texture( "font"), 20, 5, 7.0 / 5 };

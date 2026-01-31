@@ -8,6 +8,7 @@
 #define MAX_TEXTS_3D 100
 #define MAX_TEXTURES 100
 #define MAX_ENTITIES 100
+#define MAX_OBJECTS  100
 
 #define UNI(shd, uni) (glGetUniformLocation(shd, uni))
 
@@ -67,6 +68,7 @@ u32 canvas_create_VBO(u32, const void*, GLenum);
 void canvas_vertex_attrib_pointer(u8, u8, GLenum, GLenum, u16, void*);
 void text_3d_draw_all(u32 shader);
 void entity_draw_all(u32 shader);
+void object_load_all();
 
 // Canvas
 
@@ -131,6 +133,7 @@ void canvas_init(Camera* cam, CanvasConfig config) {
 
   init_audio_engine();
   texture_load_all();
+  object_load_all();
 }
 
 void generate_proj_mat(Camera* cam, u32 shader) {
@@ -399,13 +402,22 @@ void canvas_set_material(u32 shader, Material mat) {
 typedef f32 Vertex[8];
 
 typedef struct {
-  u32 size, VAO, VBO;
-  Vertex* vertexes;
+  Vertex* vs;
+  char name[32];
+  u32 size;
+} Object;
+
+Object objects[MAX_OBJECTS];
+u8 objects_size = 0;
+
+typedef struct {
+  u32 VAO, VBO;
+  Object* object;
   mat4 model;
   Material material;
 } Model;
 
-void model_parse(Model* model, const c8* path, u32* size, f32 scale) {
+void model_parse(Object* obj, const c8* path) {
   vec3*   poss = malloc(sizeof(vec3));
   vec2*   texs = malloc(sizeof(vec2));
   Vertex* square = malloc(sizeof(Vertex));
@@ -420,7 +432,6 @@ void model_parse(Model* model, const c8* path, u32* size, f32 scale) {
     if      (buffer[0] == 'v' && buffer[1] == ' ') {
       poss = realloc(poss, sizeof(vec3) * (++pos_i + 1));
       sscanf(buffer, "v %f %f %f", &poss[pos_i][0], &poss[pos_i][1], &poss[pos_i][2]);
-      glm_vec3_scale(poss[pos_i], scale, poss[pos_i]);
     }
     else if (buffer[0] == 'v' && buffer[1] == 't') {
       texs = realloc(texs, sizeof(vec2) * (++tex_i + 3));
@@ -460,25 +471,53 @@ void model_parse(Model* model, const c8* path, u32* size, f32 scale) {
   free(poss);
   free(texs);
 
-  *size = vrt_i;
-  model->vertexes = square;
+  obj->size = vrt_i;
+  obj->vs = square;
 }
 
-Model* model_create(const c8* name, Material material, f32 scale) {
+Object* object(char* name) {
+  for (int i = 0; i < objects_size; i++) {
+    if (strcmp(objects[i].name, name)) continue;
+    return &objects[i];
+  }
+
+  EXIT("Object \"%s\" not found", name);
+}
+
+Model* model_create(const c8* name, Material material) {
   c8 buffer[64] = { 0 };
-  sprintf(buffer, "obj/%s.obj", name);
+  sprintf(buffer, "%s.obj", name);
 
   Model* model = malloc(sizeof(Model));
-  model_parse(model, buffer, &model->size, scale);
+  model->object = object(buffer);
   model->material = material;
 
   model->VAO = canvas_create_VAO();
-  model->VBO = canvas_create_VBO(model->size * sizeof(Vertex), model->vertexes, GL_STATIC_DRAW);
+  model->VBO = canvas_create_VBO(model->object->size * sizeof(Vertex), model->object->vs, GL_STATIC_DRAW);
   canvas_vertex_attrib_pointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(f32), (void*) 0);
   canvas_vertex_attrib_pointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(f32), (void*) (3 * sizeof(f32)));
   canvas_vertex_attrib_pointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(f32), (void*) (6 * sizeof(f32)));
 
   return model;
+}
+
+void object_load(char* name) {
+  c8 buffer[64] = { 0 };
+  sprintf(buffer, "obj/%s", name);
+  model_parse(&objects[objects_size], buffer);
+  strcpy(objects[objects_size++].name, name);
+}
+
+void object_load_all() {
+  struct dirent* de;
+  DIR* dir = opendir("./obj");
+  ASSERT(dir, "Could not open \"obj\" directory");
+
+  while ((de = readdir(dir)) != NULL) {
+    if (de->d_type != DT_REG) continue;
+    PRINT("%s", de->d_name);
+    object_load(de->d_name);
+  }
 }
 
 void model_bind(Model* model, u32 shader) {
@@ -490,7 +529,7 @@ void model_draw(Model* model, u32 shader) {
   glBindBuffer(GL_ARRAY_BUFFER, model->VBO);
   glBindVertexArray(model->VAO);
   canvas_unim4(shader, "MODEL", model->model[0]);
-  glDrawArrays(GL_TRIANGLES, 0, model->size);
+  glDrawArrays(GL_TRIANGLES, 0, model->object->size);
 }
 
 // Light

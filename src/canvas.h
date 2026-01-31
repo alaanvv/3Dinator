@@ -1,7 +1,9 @@
+#include <dirent.h>
 #include <glad/glad.h>
 #include <cglm/cglm.h>
 #include <GLFW/glfw3.h>
 
+#define MAX_SOUNDS 100
 #define MAX_ENTITIES 100
 
 #define UNI(shd, uni) (glGetUniformLocation(shd, uni))
@@ -13,6 +15,7 @@
 #define RAND(min, max) (rand() % (max - min) + min)
 #define PRINT(...) { printf(__VA_ARGS__); printf("\n"); }
 #define ASSERT(x, ...) if (!(x)) { PRINT(__VA_ARGS__); exit(1); }
+#define EXIT(...) { PRINT(__VA_ARGS__); exit(1); }
 #define VEC2_COPY(v1, v2) { v2[0] = v1[0]; v2[1] = v1[1]; }
 #define VEC2_COMPARE(v1, v2) (v1[0] == v2[0] && v1[1] == v2[1])
 #define VEC3_COPY(v1, v2) { v2[0] = v1[0]; v2[1] = v1[1]; v2[2] = v1[2]; }
@@ -584,29 +587,35 @@ typedef struct {
 } Sound;
 
 ma_engine engine;
-Sound* sounds;
-u8 sound_count;
+Sound sounds[MAX_SOUNDS];
+u8 sounds_size = 0;
 
-void init_audio_engine(c8** names, u8 amount) {
+void init_audio_engine() {
   ASSERT(ma_engine_init(NULL, &engine) == MA_SUCCESS, "Failed to init audio");
-  sound_count = amount;
 
-  sounds = malloc(amount * sizeof(Sound));
+  struct dirent* de;
+  DIR* dir = opendir("./wav");
+  ASSERT(dir, "Could not open \"wav\" directory");
 
-  for (u8 i = 0; i < amount; i++) {
+  while ((de = readdir(dir)) != NULL) {
+    if (de->d_type != DT_REG) continue;
     c8 buffer[64] = { 0 };
-    sprintf(buffer, "wav/%s.wav", names[i]);
-    ASSERT(ma_sound_init_from_file(&engine, buffer, 0, NULL, NULL, &sounds[i].sound) == MA_SUCCESS, "Failed to load %s.wav", names[i]);
-    strcpy(sounds[i].name, names[i]);
+    sprintf(buffer, "wav/%s", de->d_name);
+    ASSERT(ma_sound_init_from_file(&engine, buffer, 0, NULL, NULL, &sounds[sounds_size].sound) == MA_SUCCESS, "Failed to load %s", de->d_name);
+    strcpy(sounds[sounds_size++].name, de->d_name);
   }
 }
 
 void play_audio(c8* name) {
-  for (int i = 0; i < sound_count; i++) {
-    if (strcmp(sounds[i].name, name)) continue;
+  c8 buffer[64] = { 0 };
+  sprintf(buffer, "%s.wav", name);
+  for (int i = 0; i < sounds_size; i++) {
+    if (strcmp(sounds[i].name, buffer)) continue;
     ma_sound_start(&sounds[i].sound);
     return;
   }
+
+  EXIT("Audio \"%s\" not found", name);
 }
 
 // Camera

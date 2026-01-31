@@ -49,7 +49,7 @@ int main() {
   Font font = { GL_TEXTURE2, 20, 5, 7.0 / 5 };
 
   // Audio
-  init_audio_engine((char*[32]) { "idk" }, 1);
+  init_audio_engine();
   play_audio("idk");
 
   // Shader

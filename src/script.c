@@ -1,7 +1,5 @@
 #include "canvas.h"
 
-u32 shader, hud_shader;
-
 CanvasConfig config = { 
   .title = "FONT", 
   .capture_mouse = 1, 
@@ -24,43 +22,28 @@ Camera cam = {
 int main() {
   canvas_init(&cam, config);
 
-  // Material
-  Material m_sphere = { DEEP_PURPLE, 0.3, 0.6 };
-  Material m_cube   = { DEEP_GREEN,  0.3, 0.6 };
-  Material m_glass  = { WHITE,       0.3, 0.6, .tex = texture("glass") };
-  Material m_text   = { DEEP_RED,    0.5, 0.5, .lig = 1 };
-  Material m_lamp   = { WHITE,                 .lig = 1 };
-
-  // Light
-  PntLig light = { WHITE, { 2 }, 1, 0.07, 0.017 };
-
-  // Font
-  Font font = { texture( "font"), 20, 5, 7.0 / 5 };
-
-  // Audio
-  play_audio("idk");
-
-  // Shader
-  shader = shader_create_program("obj");
+  u32 shader = shader_create_program("obj");
   generate_proj_mat(&cam, shader);
   generate_view_mat(&cam, shader);
-  canvas_set_pnt_lig(shader, light, 0);
-  hud_shader = shader_create_program("hud");
+  canvas_set_pnt_lig(shader, (PntLig) { WHITE, { 2 }, 1, 0.07, 0.017 }, 0);
+  u32 hud_shader = shader_create_program("hud");
   generate_ortho_mat(&cam, hud_shader);
 
-  // Entities
-  Entity* sphere = entity_create("sphere", m_sphere);
-  Entity* glass  = entity_create("cube", m_glass);
-  Entity* cube   = entity_create("cube", m_cube);
-  Entity* lamp   = entity_create("sphere", m_lamp);
-  Text3D* text   = text_3d_create("ALAANVV", font, 0.01, m_text);
+  Font    font   = { texture( "font"), 20, 5, 7.0 / 5 };
+  Entity* sphere = entity_create("sphere",               (Material) { DEEP_PURPLE, 0.3, 0.6 });
+  Entity* glass  = entity_create("cube",                 (Material) { WHITE,       0.3, 0.6, .tex = texture("glass") });
+  Entity* cube   = entity_create("cube",                 (Material) { DEEP_GREEN,  0.3, 0.6 });
+  Entity* lamp   = entity_create("sphere",               (Material) { WHITE,                 .lig = 1 });
+  Text3D* text   = text_3d_create("ALAANVV", font, 0.01, (Material) { DEEP_RED,    0.5, 0.5, .lig = 1 });
+
+  play_audio("idk");
 
   while (!glfwWindowShouldClose(cam.window)) {
     VEC3_COPY(VEC3(sin(glfwGetTime())      * 8, 0,    cos(glfwGetTime()) * 8),      sphere->pos);
     VEC3_COPY(VEC3(sin(glfwGetTime() + PI) * 8, -0.5, cos(glfwGetTime() + PI) * 8), cube->pos);
     VEC3_COPY(VEC3(sin(glfwGetTime() + PI) * 5, -0.5, cos(glfwGetTime() + PI) * 5), glass->pos);
+    VEC3_COPY(VEC3(glfwGetTime() * 5, 0, 0), text->rot);
     VEC3_COPY(VEC3(0, 0, -5), text->pos);
-    VEC3_COPY(VEC3(glfwGetTime() * PI4, sin(glfwGetTime()* 2) * PI4, sin(glfwGetTime()*7) * PI2), text->rot);
 
     canvas_draw_3d_entities(shader);
 

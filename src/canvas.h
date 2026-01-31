@@ -515,7 +515,6 @@ void object_load_all() {
 
   while ((de = readdir(dir)) != NULL) {
     if (de->d_type != DT_REG) continue;
-    PRINT("%s", de->d_name);
     object_load(de->d_name);
   }
 }

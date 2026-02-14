@@ -14,7 +14,31 @@
 
 # Setup
 
-- Add to `/inc`: KHR, glad, miniaudio, glfw and cglm
+### Preparing `/inc`
+
+- Adding **glfw** and **cglm** (**miniaudio** is optional)
+
+```
+mkdir inc
+cd inc
+git clone https://github.com/recp/cglm
+git clone https://github.com/glfw/glfw
+git clone https://github.com/mackron/miniaudio
+```
+
+- Adding **glad**
+    - Generate files through [webservice](https://glad.dav1d.de/)
+    - Put them on `inc/glad`
+    - Also add a `CMakeLists.txt`:
+
+```
+cmake_minimum_required(VERSION 3.16)
+project(glad)
+
+add_library(glad)
+target_sources(glad PRIVATE src/glad.c)
+target_include_directories(glad PUBLIC include)
+```
 
 ---
 
